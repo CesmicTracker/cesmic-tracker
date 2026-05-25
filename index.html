@@ -532,13 +532,13 @@ function App() {
 
       {modal?.type==="newClient" && <NewClientModal onClose={()=>setModal(null)} onSave={async data=>{await saveClient(data);setModal(null);}} />}
       {modal?.type==="newJob" && <NewJobModal client={modal.client} onClose={()=>setModal(null)} onSave={async r=>{await addRecord(modal.client.id,"jobs",r);setModal(null);}} />}
-      {modal?.type==="editJob" && <NewJobModal client={modal.client} record={modal.record} onClose={()=>setModal(null)} onSave={async r=>{await updateRecord(modal.client.id,"jobs",modal.record.id,r);setModal(null);}} />}
+      {modal?.type==="editJob" && <NewJobModal client={modal.client} record={modal.record} onClose={()=>setModal(null)} onSave={async r=>{await updateRecord(modal.client.id,"jobs",modal.record.id,r);await loadClientDetail(modal.client.id);setModal(null);}} />}
       {modal?.type==="newTask" && <NewTaskModal client={modal.client} onClose={()=>setModal(null)} onSave={async r=>{await addRecord(modal.client.id,"tasks",r);setModal(null);}} />}
-      {modal?.type==="editTask" && <NewTaskModal client={modal.client} record={modal.record} onClose={()=>setModal(null)} onSave={async r=>{await updateRecord(modal.client.id,"tasks",modal.record.id,r);setModal(null);}} />}
+      {modal?.type==="editTask" && <NewTaskModal client={modal.client} record={modal.record} onClose={()=>setModal(null)} onSave={async r=>{await updateRecord(modal.client.id,"tasks",modal.record.id,r);await loadClientDetail(modal.client.id);setModal(null);}} />}
       {modal?.type==="newEquipment" && <NewEquipmentModal client={modal.client} onClose={()=>setModal(null)} onSave={async r=>{await addRecord(modal.client.id,"equipment",r);setModal(null);}} />}
-      {modal?.type==="editEquipment" && <NewEquipmentModal client={modal.client} record={modal.record} onClose={()=>setModal(null)} onSave={async r=>{await updateRecord(modal.client.id,"equipment",modal.record.id,r);setModal(null);}} />}
+      {modal?.type==="editEquipment" && <NewEquipmentModal client={modal.client} record={modal.record} onClose={()=>setModal(null)} onSave={async r=>{await updateRecord(modal.client.id,"equipment",modal.record.id,r);await loadClientDetail(modal.client.id);setModal(null);}} />}
       {modal?.type==="newContract" && <NewContractModal client={modal.client} onClose={()=>setModal(null)} onSave={async r=>{await addRecord(modal.client.id,"serviceContracts",r);setModal(null);}} />}
-      {modal?.type==="editContract" && <NewContractModal client={modal.client} record={modal.record} onClose={()=>setModal(null)} onSave={async r=>{await updateRecord(modal.client.id,"serviceContracts",modal.record.id,r);setModal(null);}} />}
+      {modal?.type==="editContract" && <NewContractModal client={modal.client} record={modal.record} onClose={()=>setModal(null)} onSave={async r=>{await updateRecord(modal.client.id,"serviceContracts",modal.record.id,r);await loadClientDetail(modal.client.id);setModal(null);}} />}
     </div>
   );
 }
