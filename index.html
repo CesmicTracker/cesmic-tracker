@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cesmic Client Service Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Georgia, serif; background: #f0ede8; color: #1a1a1a; min-height: 100vh; }
+.app { display: flex; min-height: 100vh; }
+.sidebar { width: 200px; background: #1c2b3a; color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar-logo { padding: 20px 16px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.sidebar-logo h1 { font-size: 13px; font-weight: 700; letter-spacing: 0.5px; color: #e8d5a3; line-height: 1.4; }
+.sidebar-logo p { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+.sidebar-nav { flex: 1; padding: 8px 0; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; cursor: pointer; font-size: 13px; color: rgba(255,255,255,0.7); transition: all 0.15s; border-left: 3px solid transparent; }
+.nav-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
+.nav-item.active { background: rgba(232,213,163,0.15); color: #e8d5a3; border-left-color: #e8d5a3; }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.sidebar-user { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12px; color: rgba(255,255,255,0.5); }
+.sidebar-user strong { display: block; color: rgba(255,255,255,0.8); font-size: 13px; }
+.logout-btn { margin-top: 6px; background: none; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.5); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+.logout-btn:hover { border-color: rgba(255,255,255,0.4); color: rgba(255,255,255,0.8); }
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.topbar { background: #fff; border-bottom: 1px solid #ddd; padding: 12px 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.topbar h2 { font-size: 16px; font-weight: 600; color: #1c2b3a; }
+.btn { padding: 7px 14px; border-radius: 5px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; }
+.btn-primary { background: #1c2b3a; color: #e8d5a3; }
+.btn-primary:hover { background: #243447; }
+.btn-secondary { background: #f5f3ef; color: #333; border: 1px solid #ddd; }
+.btn-secondary:hover { background: #ece9e3; }
+.btn-danger { background: #dc3545; color: #fff; }
+.btn-danger:hover { background: #c82333; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.search-box { flex: 1; max-width: 300px; padding: 7px 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 13px; }
+.content { flex: 1; overflow-y: auto; padding: 20px 24px; }
+.alpha-tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+.alpha-tab { padding: 4px 10px; border-radius: 4px; border: 1px solid #ddd; background: #fff; font-size: 12px; cursor: pointer; color: #555; }
+.alpha-tab.active { background: #1c2b3a; color: #e8d5a3; border-color: #1c2b3a; }
+.table-wrap { background: #fff; border-radius: 8px; border: 1px solid #ddd; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { background: #1c2b3a; color: #e8d5a3; padding: 10px 12px; text-align: left; font-weight: 600; font-size: 12px; white-space: nowrap; }
+tbody tr { border-bottom: 1px solid #f0ede8; cursor: pointer; transition: background 0.1s; }
+tbody tr:hover { background: #faf8f5; }
+tbody td { padding: 9px 12px; color: #333; font-size: 13px; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.badge-active { background: #d4edda; color: #155724; }
+.badge-completed { background: #d1ecf1; color: #0c5460; }
+.badge-task { background: #fff3cd; color: #856404; }
+.badge-cancelled { background: #f8d7da; color: #721c24; }
+.client-page { background: #fff; border-radius: 8px; border: 1px solid #ddd; overflow: hidden; }
+.client-header { background: #1c2b3a; color: #fff; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.client-header h2 { font-size: 16px; color: #e8d5a3; }
+.client-header p { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+.client-tabs { display: flex; border-bottom: 1px solid #ddd; background: #faf8f5; overflow-x: auto; }
+.client-tab { padding: 10px 18px; cursor: pointer; font-size: 13px; color: #666; border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
+.client-tab:hover { color: #1c2b3a; }
+.client-tab.active { color: #1c2b3a; border-bottom-color: #e8d5a3; background: #fff; font-weight: 600; }
+.tab-content { padding: 20px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.3px; }
+.form-group input, .form-group select, .form-group textarea { padding: 8px 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 13px; color: #333; background: #fff; font-family: Georgia, serif; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #1c2b3a; }
+.form-section { margin-bottom: 20px; }
+.form-section h3 { font-size: 13px; font-weight: 700; color: #1c2b3a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
+.tab-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+.modal { background: #fff; border-radius: 8px; width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.modal-header { background: #1c2b3a; color: #e8d5a3; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; border-radius: 8px 8px 0 0; }
+.modal-header h3 { font-size: 15px; }
+.modal-close { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 20px; cursor: pointer; line-height: 1; }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 14px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 8px; }
+.login-page { min-height: 100vh; background: #1c2b3a; display: flex; align-items: center; justify-content: center; }
+.login-card { background: #fff; border-radius: 12px; padding: 40px; width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+.login-card h1 { font-size: 22px; color: #1c2b3a; margin-bottom: 4px; }
+.login-card p { font-size: 13px; color: #888; margin-bottom: 28px; }
+.login-field { margin-bottom: 16px; }
+.login-field label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+.login-field input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: Georgia, serif; }
+.login-field input:focus { outline: none; border-color: #1c2b3a; }
+.login-btn { width: 100%; padding: 11px; background: #1c2b3a; color: #e8d5a3; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; font-family: Georgia, serif; }
+.login-btn:hover { background: #243447; }
+.login-error { color: #dc3545; font-size: 13px; margin-top: 8px; text-align: center; }
+.reports-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.report-card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+.report-card h3 { font-size: 14px; font-weight: 600; color: #1c2b3a; margin-bottom: 12px; }
+.empty-state { text-align: center; padding: 40px 20px; color: #999; font-size: 14px; }
+.phone-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.phone-row select { width: 110px; }
+.back-btn { display: flex; align-items: center; gap: 6px; color: #1c2b3a; background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 500; padding: 0; font-family: Georgia, serif; }
+.back-btn:hover { text-decoration: underline; }
+.full-width { grid-column: 1 / -1; }
+.recycle-empty { text-align: center; padding: 60px; color: #999; }
+.loading-screen { min-height: 100vh; background: #1c2b3a; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+.loading-screen p { color: #e8d5a3; font-size: 15px; }
+.spinner { width: 36px; height: 36px; border: 3px solid rgba(232,213,163,0.3); border-top-color: #e8d5a3; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.realtime-dot { display: inline-block; width: 8px; height: 8px; background: #28a745; border-radius: 50%; margin-left: 8px; vertical-align: middle; }
+@media (max-width: 768px) {
+  .sidebar { width: 52px; }
+  .nav-item span:last-child { display: none; }
+  .sidebar-logo h1, .sidebar-logo p { display: none; }
+  .sidebar-user strong { display: none; }
+  .form-grid { grid-template-columns: 1fr; }
+  .reports-grid { grid-template-columns: 1fr; }
+  .full-width { grid-column: 1; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo, useEffect, useCallback } = React;
+
+// =====================
+// SUPABASE CONFIG
+// =====================
+const SUPABASE_URL = "https://fvotrwamgmmaabypskmy.supabase.co";
+const SUPABASE_KEY = "sb_publishable_jlErcZIhBOaBGtTCz9T7Sg_ksKY97FU";
+
+const sb = {
+  headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY },
+  url: (table, params) => SUPABASE_URL + "/rest/v1/" + table + (params ? "?" + params : ""),
+  async get(table, params) {
+    let all = [];
+    let offset = 0;
+    const pageSize = 1000;
+    // Strip any existing limit/offset from params to avoid conflicts
+    const cleanParams = (params||"").replace(/&?limit=\d+/g,"").replace(/&?offset=\d+/g,"").replace(/^\&/,"");
+    while (true) {
+      const sep = cleanParams ? "&" : "";
+      const pageParams = `${cleanParams}${sep}limit=${pageSize}&offset=${offset}`;
+      const r = await fetch(sb.url(table, pageParams), {
+        headers: { ...sb.headers, "Prefer": "return=representation" }
+      });
+      if (!r.ok) break;
+      const page = await r.json();
+      if (!Array.isArray(page) || page.length === 0) break;
+      all = all.concat(page);
+      if (page.length < pageSize) break;
+      offset += pageSize;
+    }
+    return all;
+  },
+  async post(table, data) {
+    const r = await fetch(sb.url(table), { method: "POST", headers: { ...sb.headers, "Prefer": "return=representation" }, body: JSON.stringify(data) });
+    return r.json();
+  },
+  async patch(table, id, data) {
+    const r = await fetch(sb.url(table, "id=eq." + id), { method: "PATCH", headers: { ...sb.headers, "Prefer": "return=representation" }, body: JSON.stringify(data) });
+    return r.json();
+  },
+  async delete(table, id) {
+    await fetch(sb.url(table, "id=eq." + id), { method: "DELETE", headers: sb.headers });
+  },
+  async getByClient(table, clientId, extraParams) {
+    const params = "client_id=eq." + clientId + (extraParams ? "&" + extraParams : "") + "&limit=5000";
+    const r = await fetch(sb.url(table, params), {
+      headers: { ...sb.headers, "Prefer": "return=representation" }
+    });
+    return r.json();
+  }
+};
+
+// camelCase <-> snake_case converters
+const toSnake = obj => {
+  const m = { accountNumber:"account_number", renewalDate:"renewal_date", primaryWorkPhone:"primary_work_phone", billingLocation:"billing_location", contactName:"contact_name", phoneNumbers:"phone_numbers", clientId:"client_id", modelNumber:"model_number", serialNumber:"serial_number", partNumber:"part_number", subItemOf:"sub_item_of", startDate:"start_date", apcCaseNum:"apc_case_num", serviceCallNum:"service_call_num", maintenanceNum:"maintenance_num", customerPO:"customer_po", apcSalesOrder:"apc_sales_order", contractLocation:"contract_location", customFields:"custom_fields", deletedAt:"deleted_at" };
+  const r = {};
+  for (const k in obj) { r[m[k]||k] = obj[k]; }
+  return r;
+};
+const toCamel = obj => {
+  const m = { account_number:"accountNumber", renewal_date:"renewalDate", primary_work_phone:"primaryWorkPhone", billing_location:"billingLocation", contact_name:"contactName", phone_numbers:"phoneNumbers", client_id:"clientId", model_number:"modelNumber", serial_number:"serialNumber", part_number:"partNumber", sub_item_of:"subItemOf", start_date:"startDate", apc_case_num:"apcCaseNum", service_call_num:"serviceCallNum", maintenance_num:"maintenanceNum", customer_po:"customerPO", apc_sales_order:"apcSalesOrder", contract_location:"contractLocation", custom_fields:"customFields", deleted_at:"deletedAt", created_at:"createdAt" };
+  const r = {};
+  for (const k in obj) { r[m[k]||k] = obj[k]; }
+  // Safely parse any jsonb fields that may come back as strings
+  const jsonFields = ["phoneNumbers","customFields"];
+  for (const f of jsonFields) {
+    if (typeof r[f] === "string") {
+      try { r[f] = JSON.parse(r[f]); } catch(e) { r[f] = []; }
+    }
+    if (!Array.isArray(r[f])) r[f] = [];
+  }
+  return r;
+};
+
+const ALPHABET_TABS = ["All","123","ABC","DEF","GHI","JKL","MNO","PQRS","TUV","WXYZ"];
+const getAlphaGroup = name => {
+  if (!name) return "All";
+  const c = name[0].toUpperCase();
+  if ("0123456789".includes(c)) return "123";
+  if ("ABC".includes(c)) return "ABC";
+  if ("DEF".includes(c)) return "DEF";
+  if ("GHI".includes(c)) return "GHI";
+  if ("JKL".includes(c)) return "JKL";
+  if ("MNO".includes(c)) return "MNO";
+  if ("PQRS".includes(c)) return "PQRS";
+  if ("TUV".includes(c)) return "TUV";
+  if ("WXYZ".includes(c)) return "WXYZ";
+  return "All";
+};
+
+const USERS = [
+  { username: "admin", password: "cesmic2024", name: "Administrator" },
+  { username: "user1", password: "cesmic2024", name: "User One" },
+  { username: "user2", password: "cesmic2024", name: "User Two" },
+  { username: "user3", password: "cesmic2024", name: "User Three" },
+];
+
+function formatPhone(raw) {
+  const digits = (raw||"").replace(/\D/g,"").slice(0,10);
+  if (!digits.length) return "";
+  if (digits.length <= 3) return "("+digits;
+  if (digits.length <= 6) return "("+digits.slice(0,3)+") "+digits.slice(3);
+  return "("+digits.slice(0,3)+") "+digits.slice(3,6)+"-"+digits.slice(6);
+}
+
+function statusBadge(s) {
+  if (!s) return null;
+  const cl = s.includes("Completed") ? "badge-completed" : s.includes("Cancelled") ? "badge-cancelled" : s.includes("Active") ? "badge-active" : "badge-task";
+  return <span className={"badge "+cl}>{s}</span>;
+}
+
+// =====================
+// MAIN APP
+// =====================
+function App() {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [activeNav, setActiveNav] = useState("customers");
+  const [selectedClientId, setSelectedClientId] = useState(null);
+  const [alphaTab, setAlphaTab] = useState("All");
+  const [search, setSearch] = useState("");
+  const [activeClientTab, setActiveClientTab] = useState("general");
+  const [modal, setModal] = useState(null);
+  const [loginForm, setLoginForm] = useState({ username:"", password:"" });
+  const [loginError, setLoginError] = useState("");
+  const [officeDutiesTab, setOfficeDutiesTab] = useState("tasks");
+
+  const loadClients = useCallback(async () => {
+    setLoading(true);
+    try {
+      const clientRows = await sb.get("clients","deleted=eq.false&order=name.asc");
+      const mapped = (clientRows||[]).map(r => {
+        const c = toCamel(r);
+        c.phoneNumbers = c.phoneNumbers || [];
+        c.jobs = [];
+        c.tasks = [];
+        c.equipment = [];
+        c.serviceContracts = [];
+        c.detailLoaded = false;
+        return c;
+      });
+      setClients(mapped);
+    } catch(e) { console.error(e); }
+    setLoading(false);
+  }, []);
+
+  const loadClientDetail = useCallback(async (clientId) => {
+    try {
+      const [jobRows, taskRows, eqRows, scRows] = await Promise.all([
+        sb.getByClient("jobs", clientId, "order=date.desc"),
+        sb.getByClient("tasks", clientId, "order=date.asc"),
+        sb.getByClient("equipment", clientId, "order=created_at.asc"),
+        sb.getByClient("service_contracts", clientId, "order=created_at.asc"),
+      ]);
+      setClients(prev => prev.map(c => {
+        if (c.id !== clientId) return c;
+        return {
+          ...c,
+          jobs: (jobRows||[]).map(toCamel),
+          tasks: (taskRows||[]).map(toCamel),
+          equipment: (eqRows||[]).map(toCamel),
+          serviceContracts: (scRows||[]).map(toCamel),
+          detailLoaded: true
+        };
+      }));
+    } catch(e) { console.error(e); }
+  }, []);
+
+  useEffect(() => { if (currentUser) loadClients(); }, [currentUser]);
+
+  // Removed auto-refresh to prevent jobs disappearing while viewing
+  // Manual refresh happens on login and after adding/editing records
+
+  const selectedClient = clients.find(c => c.id === selectedClientId);
+
+  const filteredClients = useMemo(() => clients.filter(c => {
+    const matchAlpha = alphaTab === "All" || getAlphaGroup(c.name) === alphaTab;
+    const q = search.toLowerCase();
+    const matchSearch = !q || c.name.toLowerCase().includes(q) || (c.accountNumber||"").toLowerCase().includes(q) || (c.city||"").toLowerCase().includes(q);
+    return matchAlpha && matchSearch;
+  }), [clients, alphaTab, search]);
+
+  const allActiveTasks = useMemo(() => clients.flatMap(c => (c.tasks||[]).filter(t => t.status==="Active Task").map(t => ({...t,clientName:c.name,clientId:c.id}))).sort((a,b)=>(a.date||"").localeCompare(b.date||"")), [clients]);
+  const allActiveJobs = useMemo(() => clients.flatMap(c => (c.jobs||[]).filter(j => j.status==="Active Job").map(j => ({...j,clientName:c.name,clientId:c.id}))).sort((a,b)=>(b.date||"").localeCompare(a.date||"")), [clients]);
+
+  // Load all tasks for office duties — jobs loaded on demand per client only
+  useEffect(() => {
+    if (!currentUser) return;
+    const loadAllTasks = async () => {
+      try {
+        const taskRows = await sb.get("tasks","order=date.asc");
+        const taskClientMap = {};
+        (taskRows||[]).forEach(r => { const t=toCamel(r); if(!taskClientMap[t.clientId]) taskClientMap[t.clientId]=[]; taskClientMap[t.clientId].push(t); });
+        setClients(prev => prev.map(c => ({
+          ...c,
+          tasks: taskClientMap[c.id] !== undefined ? taskClientMap[c.id] : c.tasks,
+        })));
+      } catch(e) { console.error(e); }
+    };
+    loadAllTasks();
+  }, [currentUser]);
+  const deletedClients = useMemo(() => [], []);
+
+  const handleLogin = () => {
+    const user = USERS.find(u => u.username===loginForm.username && u.password===loginForm.password);
+    if (user) { setCurrentUser(user); setLoginError(""); }
+    else setLoginError("Invalid username or password.");
+  };
+
+  // DB operations
+  const saveClient = async (data) => {
+    const snake = toSnake({ ...data, deleted: false });
+    delete snake.jobs; delete snake.tasks; delete snake.equipment; delete snake.serviceContracts;
+    delete snake.id; delete snake.created_at;
+    const rows = await sb.post("clients", snake);
+    await loadClients();
+    return rows[0];
+  };
+  const updateClient = async (id, data) => {
+    // Only send valid database columns
+    const validFields = ["account_number","office","renewal_date","maintenance","frequency","notes","name","address","city","province","postal","primary_work_phone","billing_location","contact_name","email","phone_numbers","access"];
+    const snake = toSnake({...data});
+    const clean = {};
+    for (const k of validFields) { if (snake[k] !== undefined) clean[k] = snake[k]; }
+    await sb.patch("clients", id, clean);
+    setClients(prev => prev.map(c => c.id===id ? {...c,...data} : c));
+  };
+  const deleteClient = async (id) => {
+    await sb.patch("clients", id, { deleted: true, deleted_at: new Date().toISOString() });
+    setClients(prev => prev.filter(c => c.id!==id));
+    setSelectedClientId(null);
+  };
+
+  const addRecord = async (clientId, tab, data) => {
+    const tableMap = { jobs:"jobs", tasks:"tasks", equipment:"equipment", serviceContracts:"service_contracts" };
+    const snake = toSnake({...data, clientId});
+    delete snake.id; delete snake.created_at;
+    const rows = await sb.post(tableMap[tab], snake);
+    const newRec = toCamel(rows[0]);
+    setClients(prev => prev.map(c => c.id===clientId ? {...c,[tab]:[...c[tab],newRec]} : c));
+  };
+  const updateRecord = async (clientId, tab, recId, data) => {
+    const tableMap = { jobs:"jobs", tasks:"tasks", equipment:"equipment", serviceContracts:"service_contracts" };
+    const snake = toSnake({...data});
+    delete snake.id; delete snake.client_id; delete snake.created_at; delete snake.detailLoaded;
+    await sb.patch(tableMap[tab], recId, snake);
+    // Re-fetch the updated record to ensure local state matches database
+    const updated = await sb.getByClient(tableMap[tab], clientId, "order=created_at.asc");
+    const updatedRecords = (updated||[]).map(toCamel);
+    setClients(prev => prev.map(c => c.id===clientId ? {...c, [tab]: updatedRecords, detailLoaded: true} : c));
+  };
+  const deleteRecord = async (clientId, tab, recId) => {
+    const tableMap = { jobs:"jobs", tasks:"tasks", equipment:"equipment", serviceContracts:"service_contracts" };
+    await sb.delete(tableMap[tab], recId);
+    setClients(prev => prev.map(c => c.id===clientId ? {...c,[tab]:c[tab].filter(r=>r.id!==recId)} : c));
+  };
+
+  if (!currentUser) return (
+    <div className="login-page">
+      <div className="login-card">
+        <h1>Cesmic</h1>
+        <p>Client Service Tracker — Sign in to continue</p>
+        <div className="login-field"><label>Username</label><input value={loginForm.username} onChange={e=>setLoginForm(p=>({...p,username:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&handleLogin()} placeholder="Enter username" /></div>
+        <div className="login-field"><label>Password</label><input type="password" value={loginForm.password} onChange={e=>setLoginForm(p=>({...p,password:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&handleLogin()} placeholder="Enter password" /></div>
+        <button className="login-btn" onClick={handleLogin}>Sign In</button>
+        {loginError && <p className="login-error">{loginError}</p>}
+      </div>
+    </div>
+  );
+
+  if (loading && clients.length===0) return (
+    <div className="loading-screen">
+      <div className="spinner"></div>
+      <p>Loading Cesmic Client Service Tracker...</p>
+    </div>
+  );
+
+  return (
+    <div className="app">
+      <div className="sidebar">
+        <div className="sidebar-logo"><h1>CESMIC<br/>CLIENT SERVICE</h1><p>TRACKER v3.0</p></div>
+        <nav className="sidebar-nav">
+          {[{id:"customers",icon:"👥",label:"Customers"},{id:"office",icon:"📋",label:"Office Duties"},{id:"reports",icon:"📊",label:"Reports"},{id:"recycle",icon:"🗑️",label:"Recycle Bin"}].map(item => (
+            <div key={item.id} className={`nav-item ${activeNav===item.id?"active":""}`} onClick={()=>{setActiveNav(item.id);setSelectedClientId(null);}}>
+              <span className="nav-icon">{item.icon}</span><span>{item.label}</span>
+            </div>
+          ))}
+        </nav>
+        <div className="sidebar-user">
+          <strong>{currentUser.name}</strong>
+          <span className="realtime-dot" title="Live sync active"></span>
+          <button className="logout-btn" onClick={()=>setCurrentUser(null)}>Sign Out</button>
+        </div>
+      </div>
+
+      <div className="main">
+        {activeNav==="customers" && !selectedClientId && (
+          <>
+            <div className="topbar">
+              <h2>Customers</h2>
+              <button className="btn btn-primary" onClick={()=>setModal({type:"newClient"})}>+ New Customer</button>
+              <input className="search-box" placeholder="Search by name, account, city..." value={search} onChange={e=>setSearch(e.target.value)} />
+            </div>
+            <div className="content">
+              <div className="alpha-tabs">{ALPHABET_TABS.map(t=><button key={t} className={`alpha-tab ${alphaTab===t?"active":""}`} onClick={()=>setAlphaTab(t)}>{t}</button>)}</div>
+              <div className="table-wrap">
+                <table>
+                  <thead><tr><th>Acct #</th><th>Office</th><th>Renewal</th><th>Maintenance</th><th>Frequency</th><th>Notes</th><th>Company Name</th><th>Primary Location</th><th>Work Phone</th><th>Contact</th><th>Email</th></tr></thead>
+                  <tbody>
+                    {filteredClients.length===0 && <tr><td colSpan={11} style={{textAlign:"center",padding:"30px",color:"#999"}}>{loading?"Loading...":"No clients found"}</td></tr>}
+                    {filteredClients.map(c=>(
+                      <tr key={c.id} onClick={()=>{setSelectedClientId(c.id);setActiveClientTab("general");loadClientDetail(c.id);}}>
+                        <td>{c.accountNumber}</td><td>{c.office}</td><td>{c.renewalDate}</td><td>{c.maintenance}</td><td>{c.frequency}</td>
+                        <td style={{maxWidth:"140px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.notes}</td>
+                        <td style={{fontWeight:500,whiteSpace:"nowrap"}}>{c.name}</td>
+                        <td style={{whiteSpace:"nowrap"}}>{c.address}, {c.city}, {c.province} {c.postal}</td>
+                        <td style={{whiteSpace:"nowrap"}}>{c.primaryWorkPhone}</td>
+                        <td style={{whiteSpace:"nowrap"}}>{c.contactName}</td>
+                        <td>{c.email}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeNav==="customers" && selectedClient && (
+          <>
+            <div className="topbar">
+              <button className="back-btn" onClick={()=>setSelectedClientId(null)}>&#8592; Customers</button>
+              <h2 style={{marginLeft:8}}>{selectedClient.name}</h2>
+              <button className="btn btn-danger btn-sm" style={{marginLeft:"auto"}} onClick={()=>{if(window.confirm("Delete this client?")) deleteClient(selectedClient.id);}}>Delete</button>
+            </div>
+            <div className="content">
+              <div className="client-page">
+                <div className="client-header">
+                  <div><h2>{selectedClient.name}</h2><p>Account #{selectedClient.accountNumber} &mdash; {selectedClient.office}</p></div>
+                </div>
+                <div className="client-tabs">
+                  {[["general","General"],["jobs","Jobs"],["tasks","Tasks"],["equipment","Equipment"],["serviceContracts","Service Contracts"]].map(([key,label])=>(
+                    <div key={key} className={`client-tab ${activeClientTab===key?"active":""}`} onClick={()=>setActiveClientTab(key)}>{label}</div>
+                  ))}
+                </div>
+                <div className="tab-content">
+                  {activeClientTab==="general" && <GeneralTab client={selectedClient} onUpdate={u=>updateClient(selectedClient.id,u)} />}
+                  {activeClientTab==="jobs" && <JobsTab client={selectedClient} onAdd={r=>addRecord(selectedClient.id,"jobs",r)} onUpdate={(rid,u)=>updateRecord(selectedClient.id,"jobs",rid,u)} onDelete={rid=>deleteRecord(selectedClient.id,"jobs",rid)} setModal={setModal} />}
+                  {activeClientTab==="tasks" && <TasksTab client={selectedClient} onAdd={r=>addRecord(selectedClient.id,"tasks",r)} onUpdate={(rid,u)=>updateRecord(selectedClient.id,"tasks",rid,u)} onDelete={rid=>deleteRecord(selectedClient.id,"tasks",rid)} setModal={setModal} />}
+                  {activeClientTab==="equipment" && <EquipmentTab client={selectedClient} onAdd={r=>addRecord(selectedClient.id,"equipment",r)} onUpdate={(rid,u)=>updateRecord(selectedClient.id,"equipment",rid,u)} onDelete={rid=>deleteRecord(selectedClient.id,"equipment",rid)} setModal={setModal} />}
+                  {activeClientTab==="serviceContracts" && <ServiceContractsTab client={selectedClient} onAdd={r=>addRecord(selectedClient.id,"serviceContracts",r)} onUpdate={(rid,u)=>updateRecord(selectedClient.id,"serviceContracts",rid,u)} onDelete={rid=>deleteRecord(selectedClient.id,"serviceContracts",rid)} setModal={setModal} />}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeNav==="office" && (
+          <>
+            <div className="topbar"><h2>Office Duties</h2></div>
+            <div className="content">
+              <div className="client-tabs" style={{background:"#fff",borderRadius:"8px 8px 0 0",border:"1px solid #ddd",borderBottom:"none"}}>
+                <div className={`client-tab ${officeDutiesTab==="tasks"?"active":""}`} onClick={()=>setOfficeDutiesTab("tasks")}>Tasks</div>
+                <div className={`client-tab ${officeDutiesTab==="completion"?"active":""}`} onClick={()=>setOfficeDutiesTab("completion")}>Completion</div>
+              </div>
+              <div className="table-wrap" style={{borderRadius:"0 0 8px 8px",borderTop:"none"}}>
+                {officeDutiesTab==="tasks" && (
+                  <table>
+                    <thead><tr><th>Date</th><th>Summary</th><th>Status</th><th>Substatus</th><th>Notes</th><th>Client</th></tr></thead>
+                    <tbody>
+                      {allActiveTasks.length===0 && <tr><td colSpan={6} style={{textAlign:"center",padding:"30px",color:"#999"}}>No active tasks</td></tr>}
+                      {allActiveTasks.map(t=>(
+                        <tr key={t.clientId+"-"+t.id} onClick={()=>{setSelectedClientId(t.clientId);setActiveClientTab("tasks");setActiveNav("customers");}}>
+                          <td style={{whiteSpace:"nowrap"}}>{t.date}</td><td>{t.summary}</td>
+                          <td>{statusBadge(t.status)}</td><td>{t.substatus}</td>
+                          <td style={{maxWidth:"200px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.notes}</td>
+                          <td style={{color:"#1c2b3a",fontWeight:500,whiteSpace:"nowrap"}}>{t.clientName}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                {officeDutiesTab==="completion" && (
+                  <table>
+                    <thead><tr><th>Date</th><th>Summary</th><th>Substatus</th><th>Team</th><th>Location</th><th>Client</th></tr></thead>
+                    <tbody>
+                      {allActiveJobs.length===0 && <tr><td colSpan={6} style={{textAlign:"center",padding:"30px",color:"#999"}}>No active jobs</td></tr>}
+                      {allActiveJobs.map(j=>(
+                        <tr key={j.clientId+"-"+j.id} onClick={()=>{setSelectedClientId(j.clientId);setActiveClientTab("jobs");setActiveNav("customers");}}>
+                          <td style={{whiteSpace:"nowrap"}}>{j.date}</td><td>{j.summary}</td>
+                          <td>{j.substatus||""}</td><td>{j.team}</td><td>{j.location}</td>
+                          <td style={{color:"#1c2b3a",fontWeight:500,whiteSpace:"nowrap"}}>{j.clientName}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeNav==="reports" && <ReportsPage clients={clients} />}
+
+        {activeNav==="recycle" && (
+          <>
+            <div className="topbar"><h2>Recycle Bin</h2></div>
+            <div className="content">
+              <div className="recycle-empty"><p style={{fontSize:"48px",marginBottom:"12px"}}>🗑️</p><p>Deleted clients are permanently removed from the database.<br/>Use the Delete button on a client to remove them.</p></div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {modal?.type==="newClient" && <NewClientModal onClose={()=>setModal(null)} onSave={async data=>{await saveClient(data);setModal(null);}} />}
+      {modal?.type==="newJob" && <NewJobModal client={modal.client} onClose={()=>setModal(null)} onSave={async r=>{await addRecord(modal.client.id,"jobs",r);setModal(null);}} />}
+      {modal?.type==="editJob" && <NewJobModal client={modal.client} record={modal.record} onClose={()=>setModal(null)} onSave={async r=>{await updateRecord(modal.client.id,"jobs",modal.record.id,r);await loadClientDetail(modal.client.id);setModal(null);}} />}
+      {modal?.type==="newTask" && <NewTaskModal client={modal.client} onClose={()=>setModal(null)} onSave={async r=>{await addRecord(modal.client.id,"tasks",r);setModal(null);}} />}
+      {modal?.type==="editTask" && <NewTaskModal client={modal.client} record={modal.record} onClose={()=>setModal(null)} onSave={async r=>{await updateRecord(modal.client.id,"tasks",modal.record.id,r);await loadClientDetail(modal.client.id);setModal(null);}} />}
+      {modal?.type==="newEquipment" && <NewEquipmentModal client={modal.client} onClose={()=>setModal(null)} onSave={async r=>{await addRecord(modal.client.id,"equipment",r);setModal(null);}} />}
+      {modal?.type==="editEquipment" && <NewEquipmentModal client={modal.client} record={modal.record} onClose={()=>setModal(null)} onSave={async r=>{await updateRecord(modal.client.id,"equipment",modal.record.id,r);await loadClientDetail(modal.client.id);setModal(null);}} />}
+      {modal?.type==="newContract" && <NewContractModal client={modal.client} onClose={()=>setModal(null)} onSave={async r=>{await addRecord(modal.client.id,"serviceContracts",r);setModal(null);}} />}
+      {modal?.type==="editContract" && <NewContractModal client={modal.client} record={modal.record} onClose={()=>setModal(null)} onSave={async r=>{await updateRecord(modal.client.id,"serviceContracts",modal.record.id,r);await loadClientDetail(modal.client.id);setModal(null);}} />}
+    </div>
+  );
+}
+
+function GeneralTab({ client, onUpdate }) {
+  const safeClient = {...client, phoneNumbers: Array.isArray(client.phoneNumbers) ? client.phoneNumbers : (typeof client.phoneNumbers === "string" ? (() => { try { return JSON.parse(client.phoneNumbers); } catch(e) { return []; } })() : []) };
+  const [form, setForm] = useState(safeClient);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const set = (k,v) => setForm(p=>({...p,[k]:v}));
+  const setPhone = (i,k,v) => {
+    const phones = [...form.phoneNumbers];
+    const val = k==="raw" ? formatPhone(v) : v;
+    phones[i] = {...phones[i],[k]:val};
+    const updated = {...form, phoneNumbers:phones};
+    updated.primaryWorkPhone = phones[0]?.raw || "";
+    setForm(updated);
+  };
+  const save = async () => { setSaving(true); await onUpdate(form); setSaving(false); setSaved(true); setTimeout(()=>setSaved(false),2000); };
+  return (
+    <div>
+      <div className="form-section"><h3>Site Information</h3>
+        <div className="form-grid">
+          <div className="form-group"><label>Account Number</label><input value={form.accountNumber||""} onChange={e=>set("accountNumber",e.target.value)} /></div>
+          <div className="form-group"><label>Office</label><select value={form.office||"Ontario"} onChange={e=>set("office",e.target.value)}><option>Ontario</option><option>Quebec</option></select></div>
+          <div className="form-group full-width"><label>Company / Site Name</label><input value={form.name||""} onChange={e=>set("name",e.target.value)} /></div>
+          <div className="form-group full-width"><label>Address</label><input value={form.address||""} onChange={e=>set("address",e.target.value)} /></div>
+          <div className="form-group"><label>City</label><input value={form.city||""} onChange={e=>set("city",e.target.value)} /></div>
+          <div className="form-group"><label>Province</label><input value={form.province||""} onChange={e=>set("province",e.target.value)} /></div>
+          <div className="form-group"><label>Postal Code</label><input value={form.postal||""} onChange={e=>set("postal",e.target.value)} /></div>
+          <div className="form-group full-width"><label>Access</label><input value={form.access||""} onChange={e=>set("access",e.target.value)} /></div>
+        </div>
+      </div>
+      <div className="form-section"><h3>Contact Information</h3>
+        <div className="form-grid">
+          <div className="form-group"><label>Contact Name</label><input value={form.contactName||""} onChange={e=>set("contactName",e.target.value)} /></div>
+          <div className="form-group"><label>Email</label><input value={form.email||""} onChange={e=>set("email",e.target.value)} /></div>
+          <div className="form-group full-width"><label>Phone Numbers</label>
+            {(form.phoneNumbers||[]).map((p,i)=>(
+              <div key={i} className="phone-row">
+                <select value={p.type||"Work"} onChange={e=>setPhone(i,"type",e.target.value)}><option>Work</option><option>Mobile</option><option>Fax</option><option>Other</option></select>
+                <input value={p.raw||(p.area&&p.number?"("+p.area+") "+p.number:"")||""} onChange={e=>setPhone(i,"raw",e.target.value)} placeholder="(416) 555-1234" style={{flex:1}} />
+                {i>0 && <button className="btn btn-secondary btn-sm" onClick={()=>setForm(p2=>({...p2,phoneNumbers:p2.phoneNumbers.filter((_,j)=>j!==i)}))}>✕</button>}
+              </div>
+            ))}
+            <button className="btn btn-secondary btn-sm" onClick={()=>setForm(p=>({...p,phoneNumbers:[...(p.phoneNumbers||[]),{type:"Work",raw:""}]}))}>+ Add Phone</button>
+          </div>
+        </div>
+      </div>
+      <div className="form-section"><h3>List View Fields</h3>
+        <div className="form-grid">
+          <div className="form-group"><label>Renewal Date</label><input value={form.renewalDate||""} onChange={e=>set("renewalDate",e.target.value)} /></div>
+          <div className="form-group"><label>Maintenance</label><select value={form.maintenance||"NO"} onChange={e=>set("maintenance",e.target.value)}><option>A/C Only</option><option>Fire Detection</option><option>Generator</option><option>Multiple</option><option>NO</option><option>PDU Maint</option><option>Room Cleaning</option><option>Thermoscan</option><option>UPS/APC</option></select></div>
+          <div className="form-group"><label>Frequency</label><select value={form.frequency||""} onChange={e=>set("frequency",e.target.value)}><option value="">— Select —</option><option>Annual</option><option>Bi-Annual</option><option>Bi-Monthly</option><option>Monthly</option><option>Multiple</option><option>Quarterly</option></select></div>
+          <div className="form-group"><label>Billing Location</label><input value={form.billingLocation||""} onChange={e=>set("billingLocation",e.target.value)} /></div>
+          <div className="form-group full-width"><label>Notes</label><textarea rows={3} value={form.notes||""} onChange={e=>set("notes",e.target.value)} style={{resize:"vertical"}} /></div>
+        </div>
+      </div>
+      <button className="btn btn-primary" onClick={save} disabled={saving}>{saving?"Saving...":saved?"✓ Saved":"Save Changes"}</button>
+    </div>
+  );
+}
+
+function JobsTab({ client, onDelete, setModal }) {
+  return (
+    <div>
+      <div className="tab-toolbar"><button className="btn btn-primary btn-sm" onClick={()=>setModal({type:"newJob",client})}>+ New Job</button></div>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Location</th><th>Summary</th><th>Team</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            {(client.jobs||[]).length===0 && <tr><td colSpan={6} className="empty-state">No jobs recorded</td></tr>}
+            {[...(client.jobs||[])].sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(j=>(
+              <tr key={j.id} style={{cursor:"default"}}>
+                <td style={{whiteSpace:"nowrap"}}>{j.date}</td><td>{j.location}</td><td>{j.summary}</td><td>{j.team}</td>
+                <td>{statusBadge(j.status)}</td>
+                <td style={{whiteSpace:"nowrap"}}>
+                  <button className="btn btn-secondary btn-sm" style={{marginRight:4}} onClick={()=>setModal({type:"editJob",client,record:j})}>Edit</button>
+                  <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm("Delete job?")) onDelete(j.id);}}>Del</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function TasksTab({ client, onDelete, setModal }) {
+  return (
+    <div>
+      <div className="tab-toolbar"><button className="btn btn-primary btn-sm" onClick={()=>setModal({type:"newTask",client})}>+ New Task</button></div>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Summary</th><th>Notes</th><th>Status</th><th>Substatus</th><th>Actions</th></tr></thead>
+          <tbody>
+            {(client.tasks||[]).length===0 && <tr><td colSpan={6} className="empty-state">No tasks recorded</td></tr>}
+            {[...(client.tasks||[])].sort((a,b)=>(a.date||"").localeCompare(b.date||"")).map(t=>(
+              <tr key={t.id} style={{cursor:"default"}}>
+                <td style={{whiteSpace:"nowrap"}}>{t.date}</td><td>{t.summary}</td>
+                <td style={{maxWidth:"180px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.notes}</td>
+                <td>{statusBadge(t.status)}</td><td>{t.substatus}</td>
+                <td style={{whiteSpace:"nowrap"}}>
+                  <button className="btn btn-secondary btn-sm" style={{marginRight:4}} onClick={()=>setModal({type:"editTask",client,record:t})}>Edit</button>
+                  <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm("Delete task?")) onDelete(t.id);}}>Del</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function EquipmentTab({ client, onDelete, setModal }) {
+  return (
+    <div>
+      <div className="tab-toolbar"><button className="btn btn-primary btn-sm" onClick={()=>setModal({type:"newEquipment",client})}>+ New Equipment</button></div>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Item</th><th>Location</th><th>Status</th><th>Substatus</th><th>Notes</th><th>Qty</th><th>Warranty</th><th>Actions</th></tr></thead>
+          <tbody>
+            {(client.equipment||[]).length===0 && <tr><td colSpan={8} className="empty-state">No equipment recorded</td></tr>}
+            {(client.equipment||[]).map(e=>(
+              <tr key={e.id} style={{cursor:"default"}}>
+                <td style={{fontWeight:500}}>{[e.manufacturer,e.modelNumber,e.serialNumber].filter(Boolean).join(" - ")||e.item}</td><td>{e.location}</td>
+                <td>{statusBadge(e.status)}</td><td>{e.substatus}</td>
+                <td style={{maxWidth:"140px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.notes}</td>
+                <td>{e.qty}</td><td style={{whiteSpace:"nowrap"}}>{e.warranty}</td>
+                <td style={{whiteSpace:"nowrap"}}>
+                  <button className="btn btn-secondary btn-sm" style={{marginRight:4}} onClick={()=>setModal({type:"editEquipment",client,record:e})}>Edit</button>
+                  <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm("Delete equipment?")) onDelete(e.id);}}>Del</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ServiceContractsTab({ client, onDelete, setModal }) {
+  return (
+    <div>
+      <div className="tab-toolbar"><button className="btn btn-primary btn-sm" onClick={()=>setModal({type:"newContract",client})}>+ New Contract</button></div>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Summary</th><th>Status</th><th>Substatus</th><th>Start Date</th><th>Expiration</th><th>Actions</th></tr></thead>
+          <tbody>
+            {(client.serviceContracts||[]).length===0 && <tr><td colSpan={6} className="empty-state">No service contracts recorded</td></tr>}
+            {[...(client.serviceContracts||[])].sort((a,b)=> a.status==="Active" && b.status!=="Active" ? -1 : a.status!=="Active" && b.status==="Active" ? 1 : (b.expiration||"").localeCompare(a.expiration||"")).map(c=>(
+              <tr key={c.id} style={{cursor:"default"}}>
+                <td>{c.summary}</td>
+                <td>{statusBadge(c.status)}</td>
+                <td>{c.substatus}</td><td style={{whiteSpace:"nowrap"}}>{c.startDate}</td><td style={{whiteSpace:"nowrap"}}>{c.expiration}</td>
+                <td style={{whiteSpace:"nowrap"}}>
+                  <button className="btn btn-secondary btn-sm" style={{marginRight:4}} onClick={()=>setModal({type:"editContract",client,record:c})}>Edit</button>
+                  <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm("Delete contract?")) onDelete(c.id);}}>Del</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ReportsPage({ clients }) {
+  const today = new Date();
+  const in90 = new Date(today); in90.setDate(today.getDate()+90);
+  const in30 = new Date(today); in30.setDate(today.getDate()+30);
+  const expiringContracts = clients.flatMap(c=>(c.serviceContracts||[]).filter(s=>s.expiration&&new Date(s.expiration)<=in90&&new Date(s.expiration)>=today).map(s=>({...s,clientName:c.name}))).sort((a,b)=>a.expiration.localeCompare(b.expiration));
+  const expiringWarranties = clients.flatMap(c=>(c.equipment||[]).filter(e=>e.warranty&&new Date(e.warranty)<=in90&&new Date(e.warranty)>=today).map(e=>({...e,clientName:c.name}))).sort((a,b)=>a.warranty.localeCompare(b.warranty));
+  const tasksDue = clients.flatMap(c=>(c.tasks||[]).filter(t=>t.date&&new Date(t.date)<=in30&&t.status==="Active Task").map(t=>({...t,clientName:c.name}))).sort((a,b)=>a.date.localeCompare(b.date));
+  const th={textAlign:"left",padding:"4px 0",color:"#666",fontSize:"12px"};
+  const td1={padding:"5px 0",fontWeight:500,fontSize:"12px"};
+  const td2={padding:"5px 6px",color:"#555",fontSize:"12px",maxWidth:"150px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"};
+  const td3={padding:"5px 0",color:"#dc3545",fontSize:"12px",whiteSpace:"nowrap"};
+  return (
+    <>
+      <div className="topbar"><h2>Reports</h2></div>
+      <div className="content">
+        <div className="reports-grid">
+          <div className="report-card"><h3>Contracts Expiring — Next 90 Days ({expiringContracts.length})</h3>
+            {expiringContracts.length===0?<p style={{color:"#999",fontSize:"13px"}}>None expiring soon</p>:(
+              <table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr><th style={th}>Client</th><th style={th}>Summary</th><th style={th}>Expires</th></tr></thead>
+              <tbody>{expiringContracts.map((c,i)=><tr key={i} style={{borderTop:"1px solid #f0ede8"}}><td style={td1}>{c.clientName}</td><td style={td2}>{c.summary}</td><td style={td3}>{c.expiration}</td></tr>)}</tbody></table>
+            )}
+          </div>
+          <div className="report-card"><h3>Warranties Expiring — Next 90 Days ({expiringWarranties.length})</h3>
+            {expiringWarranties.length===0?<p style={{color:"#999",fontSize:"13px"}}>None expiring soon</p>:(
+              <table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr><th style={th}>Client</th><th style={th}>Item</th><th style={th}>Expires</th></tr></thead>
+              <tbody>{expiringWarranties.map((e,i)=><tr key={i} style={{borderTop:"1px solid #f0ede8"}}><td style={td1}>{e.clientName}</td><td style={td2}>{e.item}</td><td style={td3}>{e.warranty}</td></tr>)}</tbody></table>
+            )}
+          </div>
+          <div className="report-card"><h3>Tasks Due — Next 30 Days ({tasksDue.length})</h3>
+            {tasksDue.length===0?<p style={{color:"#999",fontSize:"13px"}}>No tasks due soon</p>:(
+              <table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr><th style={th}>Date</th><th style={th}>Client</th><th style={th}>Summary</th></tr></thead>
+              <tbody>{tasksDue.map((t,i)=><tr key={i} style={{borderTop:"1px solid #f0ede8"}}><td style={{...td3,color:"#856404"}}>{t.date}</td><td style={td1}>{t.clientName}</td><td style={td2}>{t.summary}</td></tr>)}</tbody></table>
+            )}
+          </div>
+          <div className="report-card"><h3>Summary</h3>
+            <table style={{width:"100%",borderCollapse:"collapse"}}><tbody>
+              {[["Total Clients",clients.length],["Active Tasks",clients.reduce((s,c)=>s+(c.tasks||[]).filter(t=>t.status==="Active Task").length,0)],["Active Jobs",clients.reduce((s,c)=>s+(c.jobs||[]).filter(j=>j.status==="Active Job").length,0)],["Total Equipment",clients.reduce((s,c)=>s+(c.equipment||[]).length,0)],["Active Contracts",clients.reduce((s,c)=>s+(c.serviceContracts||[]).filter(s2=>s2.status==="Active").length,0)]].map(([label,val])=>(
+                <tr key={label} style={{borderTop:"1px solid #f0ede8"}}><td style={{padding:"8px 0",color:"#555",fontSize:"13px"}}>{label}</td><td style={{padding:"8px 0",fontWeight:600,textAlign:"right",fontSize:"20px",color:"#1c2b3a"}}>{val}</td></tr>
+              ))}
+            </tbody></table>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function NewClientModal({ onClose, onSave }) {
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ accountNumber:"", office:"Ontario", name:"", address:"", city:"", province:"ONTARIO", postal:"", primaryWorkPhone:"", billingLocation:"", contactName:"", email:"", phoneNumbers:[{type:"Work",raw:""}], access:"", renewalDate:"", maintenance:"NO", frequency:"", notes:"" });
+  const set = (k,v) => setForm(p=>({...p,[k]:v}));
+  const setPhone = (i,k,v) => {
+    const phones = [...form.phoneNumbers];
+    const val = k==="raw" ? formatPhone(v) : v;
+    phones[i] = {...phones[i],[k]:val};
+    const updated = {...form, phoneNumbers:phones};
+    updated.primaryWorkPhone = phones[0]?.raw || "";
+    setForm(updated);
+  };
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div className="modal-header"><h3>New Customer</h3><button className="modal-close" onClick={onClose}>&#215;</button></div>
+        <div className="modal-body">
+          <div className="form-grid">
+            <div className="form-group"><label>Account Number</label><input value={form.accountNumber} onChange={e=>set("accountNumber",e.target.value)} /></div>
+            <div className="form-group"><label>Office</label><select value={form.office} onChange={e=>set("office",e.target.value)}><option>Ontario</option><option>Quebec</option></select></div>
+            <div className="form-group full-width"><label>Company / Site Name *</label><input value={form.name} onChange={e=>set("name",e.target.value)} /></div>
+            <div className="form-group full-width"><label>Address</label><input value={form.address} onChange={e=>set("address",e.target.value)} /></div>
+            <div className="form-group"><label>City</label><input value={form.city} onChange={e=>set("city",e.target.value)} /></div>
+            <div className="form-group"><label>Province</label><input value={form.province} onChange={e=>set("province",e.target.value)} /></div>
+            <div className="form-group"><label>Postal Code</label><input value={form.postal} onChange={e=>set("postal",e.target.value)} /></div>
+            <div className="form-group"><label>Contact Name</label><input value={form.contactName} onChange={e=>set("contactName",e.target.value)} /></div>
+            <div className="form-group"><label>Email</label><input value={form.email} onChange={e=>set("email",e.target.value)} /></div>
+            <div className="form-group full-width"><label>Phone Numbers</label>
+              {form.phoneNumbers.map((p,i)=>(
+                <div key={i} className="phone-row">
+                  <select value={p.type} onChange={e=>setPhone(i,"type",e.target.value)}><option>Work</option><option>Mobile</option><option>Fax</option><option>Other</option></select>
+                  <input value={p.raw||""} onChange={e=>setPhone(i,"raw",e.target.value)} placeholder="(416) 555-1234" style={{flex:1}} />
+                  {i>0 && <button className="btn btn-secondary btn-sm" onClick={()=>{const ph=form.phoneNumbers.filter((_,j)=>j!==i);setForm(p2=>({...p2,phoneNumbers:ph,primaryWorkPhone:ph[0]?.raw||""}));}}>✕</button>}
+                </div>
+              ))}
+              <button className="btn btn-secondary btn-sm" onClick={()=>setForm(p=>({...p,phoneNumbers:[...p.phoneNumbers,{type:"Work",raw:""}]}))}>+ Add Phone</button>
+            </div>
+            <div className="form-group"><label>Maintenance</label><select value={form.maintenance} onChange={e=>set("maintenance",e.target.value)}><option>A/C Only</option><option>Fire Detection</option><option>Generator</option><option>Multiple</option><option>NO</option><option>PDU Maint</option><option>Room Cleaning</option><option>Thermoscan</option><option>UPS/APC</option></select></div>
+            <div className="form-group"><label>Frequency</label><select value={form.frequency} onChange={e=>set("frequency",e.target.value)}><option value="">— Select —</option><option>Annual</option><option>Bi-Annual</option><option>Bi-Monthly</option><option>Monthly</option><option>Multiple</option><option>Quarterly</option></select></div>
+            <div className="form-group full-width"><label>Notes</label><textarea rows={2} value={form.notes} onChange={e=>set("notes",e.target.value)} style={{resize:"vertical"}} /></div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" disabled={saving} onClick={async()=>{if(!form.name.trim())return alert("Company name is required");setSaving(true);await onSave(form);setSaving(false);}}>
+            {saving?"Saving...":"Save"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function addMonths(dateStr, months) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().slice(0,10);
+}
+
+function generateDates(startDate, frequency, occurrences) {
+  const monthMap = { "Monthly": 1, "Semi-Annually": 6, "Annually": 12 };
+  const months = monthMap[frequency] || 0;
+  const dates = [];
+  for (let i = 0; i < occurrences; i++) {
+    dates.push(addMonths(startDate, i * months));
+  }
+  return dates;
+}
+
+function NewJobModal({ client, record, onClose, onSave }) {
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState(record||{date:"",location:"Primary",summary:"",team:"",status:"Active Job"});
+  const [recur, setRecur] = useState(false);
+  const [frequency, setFrequency] = useState("Monthly");
+  const [occurrences, setOccurrences] = useState(2);
+  const set=(k,v)=>setForm(p=>({...p,[k]:v}));
+
+  const previewDates = recur && form.date ? generateDates(form.date, frequency, occurrences) : [];
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div className="modal-header"><h3>{record?"Edit Job":"New Job"} &mdash; {client.name}</h3><button className="modal-close" onClick={onClose}>&#215;</button></div>
+        <div className="modal-body">
+          <div className="form-grid">
+            <div className="form-group"><label>Date</label><input type="date" value={form.date} onChange={e=>set("date",e.target.value)} /></div>
+            <div className="form-group"><label>Location</label><input value={form.location} onChange={e=>set("location",e.target.value)} /></div>
+            <div className="form-group full-width"><label>Summary</label><input value={form.summary} onChange={e=>set("summary",e.target.value)} /></div>
+            <div className="form-group"><label>Team</label>
+              <select value={form.team} onChange={e=>set("team",e.target.value)}>
+                <option value="">— Select —</option><option>A/C Maintenance</option><option>A/C Repairs</option><option>APC Certified</option><option>Electrician</option><option>Fire Suppression</option><option>Generator Technician</option><option>Room Cleaning</option><option>StruxureWare Technician</option><option>Thermoscans</option><option>UPS Technician</option>
+              </select>
+            </div>
+            <div className="form-group"><label>Status</label><select value={form.status} onChange={e=>set("status",e.target.value)}><option>Active Job</option><option>Completed Job</option><option>Cancelled</option></select></div>
+          </div>
+          {!record && (
+            <div style={{marginTop:16,borderTop:"1px solid #eee",paddingTop:16}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                <input type="checkbox" id="recurJob" checked={recur} onChange={e=>setRecur(e.target.checked)} />
+                <label htmlFor="recurJob" style={{fontSize:13,fontWeight:600,color:"#1c2b3a",cursor:"pointer",textTransform:"uppercase",letterSpacing:"0.3px"}}>Create Recurring Jobs</label>
+              </div>
+              {recur && (
+                <div className="form-grid" style={{background:"#f9f7f4",padding:12,borderRadius:6}}>
+                  <div className="form-group"><label>Frequency</label>
+                    <select value={frequency} onChange={e=>setFrequency(e.target.value)}>
+                      <option>Monthly</option><option>Semi-Annually</option><option>Annually</option>
+                    </select>
+                  </div>
+                  <div className="form-group"><label>Number of Occurrences</label>
+                    <input type="number" min="2" max="20" value={occurrences} onChange={e=>setOccurrences(parseInt(e.target.value)||2)} />
+                  </div>
+                  {previewDates.length > 0 && (
+                    <div className="form-group full-width">
+                      <label>Jobs will be created on these dates</label>
+                      <div style={{background:"#fff",border:"1px solid #ddd",borderRadius:5,padding:"8px 10px",fontSize:12,color:"#555"}}>
+                        {previewDates.map((d,i) => <span key={i} style={{display:"inline-block",background:"#e8f4e8",borderRadius:4,padding:"2px 8px",margin:"2px",color:"#155724"}}>{d}</span>)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" disabled={saving} onClick={async()=>{
+            setSaving(true);
+            if (recur && !record && form.date) {
+              const dates = generateDates(form.date, frequency, occurrences);
+              for (const d of dates) { await onSave({...form, date: d}); }
+            } else {
+              await onSave(form);
+            }
+            setSaving(false);
+          }}>{saving?"Saving...":recur&&!record?`Create ${occurrences} Jobs`:"Save"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NewTaskModal({ client, record, onClose, onSave }) {
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState(record||{date:"",summary:"",notes:"",status:"Active Task",substatus:""});
+  const [recur, setRecur] = useState(false);
+  const [frequency, setFrequency] = useState("Monthly");
+  const [occurrences, setOccurrences] = useState(2);
+  const set=(k,v)=>setForm(p=>({...p,[k]:v}));
+
+  const previewDates = recur && form.date ? generateDates(form.date, frequency, occurrences) : [];
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div className="modal-header"><h3>{record?"Edit Task":"New Task"} &mdash; {client.name}</h3><button className="modal-close" onClick={onClose}>&#215;</button></div>
+        <div className="modal-body">
+          <div className="form-grid">
+            <div className="form-group"><label>Date</label><input type="date" value={form.date} onChange={e=>set("date",e.target.value)} /></div>
+            <div className="form-group"><label>Status</label><select value={form.status} onChange={e=>set("status",e.target.value)}><option>Active Task</option><option>Completed Task</option><option>Cancelled</option></select></div>
+            <div className="form-group full-width"><label>Summary</label><input value={form.summary} onChange={e=>set("summary",e.target.value)} /></div>
+            <div className="form-group"><label>Substatus</label>
+              <select value={form.substatus} onChange={e=>set("substatus",e.target.value)}>
+                <option value="">— Select —</option><option>In Progress</option><option>Booked/Scheduled</option><option>SVA Required</option><option>Paperwork Required</option><option>Paperwork Received</option><option>Re-Book</option><option>Cancelled/Missed</option><option>HOLD DO NOT BOOK</option>
+              </select>
+            </div>
+            <div className="form-group full-width"><label>Notes</label><textarea rows={3} value={form.notes} onChange={e=>set("notes",e.target.value)} style={{resize:"vertical"}} /></div>
+          </div>
+          {!record && (
+            <div style={{marginTop:16,borderTop:"1px solid #eee",paddingTop:16}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                <input type="checkbox" id="recurTask" checked={recur} onChange={e=>setRecur(e.target.checked)} />
+                <label htmlFor="recurTask" style={{fontSize:13,fontWeight:600,color:"#1c2b3a",cursor:"pointer",textTransform:"uppercase",letterSpacing:"0.3px"}}>Create Recurring Tasks</label>
+              </div>
+              {recur && (
+                <div className="form-grid" style={{background:"#f9f7f4",padding:12,borderRadius:6}}>
+                  <div className="form-group"><label>Frequency</label>
+                    <select value={frequency} onChange={e=>setFrequency(e.target.value)}>
+                      <option>Monthly</option><option>Semi-Annually</option><option>Annually</option>
+                    </select>
+                  </div>
+                  <div className="form-group"><label>Number of Occurrences</label>
+                    <input type="number" min="2" max="20" value={occurrences} onChange={e=>setOccurrences(parseInt(e.target.value)||2)} />
+                  </div>
+                  {previewDates.length > 0 && (
+                    <div className="form-group full-width">
+                      <label>Tasks will be created on these dates</label>
+                      <div style={{background:"#fff",border:"1px solid #ddd",borderRadius:5,padding:"8px 10px",fontSize:12,color:"#555"}}>
+                        {previewDates.map((d,i) => <span key={i} style={{display:"inline-block",background:"#e8f4e8",borderRadius:4,padding:"2px 8px",margin:"2px",color:"#155724"}}>{d}</span>)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" disabled={saving} onClick={async()=>{
+            setSaving(true);
+            if (recur && !record && form.date) {
+              const dates = generateDates(form.date, frequency, occurrences);
+              for (const d of dates) { await onSave({...form, date: d}); }
+            } else {
+              await onSave(form);
+            }
+            setSaving(false);
+          }}>{saving?"Saving...":recur&&!record?`Create ${occurrences} Tasks`:"Save"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NewEquipmentModal({ client, record, onClose, onSave }) {
+  const [saving, setSaving] = useState(false);
+  const buildItem=(s,m,mn)=>[m,mn,s].filter(Boolean).join(" - ");
+  const normalizeRecord = (r) => {
+    const mfr = r.manufacturer||"";
+    const model = r.model_number||r.modelNumber||"";
+    const serial = r.serial_number||r.serialNumber||"";
+    const item = [mfr,model,serial].filter(Boolean).join(" - ");
+    return {
+      item: item,
+      location: r.location||"Primary",
+      status: r.status||"Installed",
+      substatus: r.substatus||"",
+      notes: r.notes||"",
+      qty: r.qty||1,
+      warranty: r.warranty||"",
+      manufacturer: mfr,
+      modelNumber: model,
+      serialNumber: serial,
+      partNumber: r.part_number||r.partNumber||"",
+      installed: r.installed||"",
+      removed: r.removed||"",
+      subItemOf: r.sub_item_of||r.subItemOf||"None"
+    };
+  };
+  const [form, setForm] = useState(record ? normalizeRecord(record) : {item:"",location:"Primary",status:"Installed",substatus:"",notes:"",qty:1,warranty:"",manufacturer:"",modelNumber:"",serialNumber:"",partNumber:"",installed:"",removed:"",subItemOf:"None"});
+  const set=(k,v)=>{
+    setForm(p=>{
+      const updated={...p,[k]:v};
+      if(["serialNumber","manufacturer","modelNumber"].includes(k)){
+        updated.item=buildItem(k==="serialNumber"?v:p.serialNumber,k==="manufacturer"?v:p.manufacturer,k==="modelNumber"?v:p.modelNumber);
+      }
+      return updated;
+    });
+  };
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div className="modal-header"><h3>{record?"Edit Equipment":"New Equipment"} &mdash; {client.name}</h3><button className="modal-close" onClick={onClose}>&#215;</button></div>
+        <div className="modal-body">
+          <div className="form-grid">
+            <div className="form-group full-width"><label>Item Description (auto-filled)</label><input value={form.item} onChange={e=>setForm(p=>({...p,item:e.target.value}))} placeholder="Auto-filled from Serial, Manufacturer, Model" /></div>
+            <div className="form-group"><label>Serial Number</label><input value={form.serialNumber} onChange={e=>set("serialNumber",e.target.value)} /></div>
+            <div className="form-group"><label>Manufacturer</label>
+              <select value={form.manufacturer} onChange={e=>set("manufacturer",e.target.value)}>
+                <option value="">— Select —</option><option>APC</option><option>ASCO</option><option>Canatel</option><option>Carrier</option><option>Comet</option><option>Cummins</option><option>Eaton</option><option>Fujitsu</option><option>Haier</option><option>Heatcraft</option><option>Liebert</option><option>McQuay</option><option>MGE</option><option>Mitsubishi</option><option>Multistack</option><option>Powerware</option><option>Trane</option><option>Tripplite</option>
+              </select>
+            </div>
+            <div className="form-group"><label>Product Name</label><input value={form.partNumber} onChange={e=>setForm(p=>({...p,partNumber:e.target.value}))} /></div>
+            <div className="form-group"><label>Model Number</label><input value={form.modelNumber} onChange={e=>set("modelNumber",e.target.value)} /></div>
+            <div className="form-group"><label>Status</label><select value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))}><option>Installed</option><option>Removed</option><option>Decommissioned</option></select></div>
+            <div className="form-group"><label>Substatus</label><select value={form.substatus} onChange={e=>setForm(p=>({...p,substatus:e.target.value}))}><option value="">— Select —</option><option>Service Eligible</option><option>EOSL</option></select></div>
+            <div className="form-group"><label>Location</label><input value={form.location} onChange={e=>setForm(p=>({...p,location:e.target.value}))} /></div>
+            <div className="form-group"><label>Sub-Item Of</label><input value={form.subItemOf} onChange={e=>setForm(p=>({...p,subItemOf:e.target.value}))} /></div>
+            <div className="form-group"><label>Installed Date</label><input type="date" value={form.installed} onChange={e=>setForm(p=>({...p,installed:e.target.value}))} /></div>
+            <div className="form-group"><label>Removed Date</label><input type="date" value={form.removed} onChange={e=>setForm(p=>({...p,removed:e.target.value}))} /></div>
+            <div className="form-group"><label>Qty</label><input type="number" value={form.qty} onChange={e=>setForm(p=>({...p,qty:e.target.value}))} /></div>
+            <div className="form-group"><label>Warranty Expiry</label><input type="date" value={form.warranty} onChange={e=>setForm(p=>({...p,warranty:e.target.value}))} /></div>
+            <div className="form-group full-width"><label>Notes</label><textarea rows={3} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} style={{resize:"vertical"}} /></div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" disabled={saving} onClick={async()=>{setSaving(true);await onSave(form);setSaving(false);}}>{saving?"Saving...":"Save"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NewContractModal({ client, record, onClose, onSave }) {
+  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("contract");
+  const [form, setForm] = useState(record||{summary:"",status:"Active",substatus:"",startDate:"",expiration:"",apcCaseNum:"",serviceCallNum:"",maintenanceNum:"",customerPO:"",apcSalesOrder:"",contractLocation:""});
+  const set=(k,v)=>setForm(p=>({...p,[k]:v}));
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div className="modal-header"><h3>{record?"Edit Contract":"New Service Contract"} &mdash; {client.name}</h3><button className="modal-close" onClick={onClose}>&#215;</button></div>
+        <div className="client-tabs" style={{background:"#faf8f5",borderBottom:"1px solid #ddd"}}>
+          <div className={`client-tab ${activeTab==="contract"?"active":""}`} onClick={()=>setActiveTab("contract")}>Contract</div>
+          <div className={`client-tab ${activeTab==="customFields"?"active":""}`} onClick={()=>setActiveTab("customFields")}>Custom Fields</div>
+        </div>
+        <div className="modal-body">
+          {activeTab==="contract" && (
+            <div className="form-grid">
+              <div className="form-group full-width"><label>Summary</label><input value={form.summary} onChange={e=>set("summary",e.target.value)} placeholder="Contract description and equipment references" /></div>
+              <div className="form-group"><label>Status</label><select value={form.status} onChange={e=>set("status",e.target.value)}><option>Active</option><option>Completed</option><option>Cancelled</option></select></div>
+              <div className="form-group"><label>Substatus</label><input value={form.substatus} onChange={e=>set("substatus",e.target.value)} placeholder="e.g. Fulfilled" /></div>
+              <div className="form-group"><label>Start Date</label><input type="date" value={form.startDate} onChange={e=>set("startDate",e.target.value)} /></div>
+              <div className="form-group"><label>Expiration Date</label><input type="date" value={form.expiration} onChange={e=>set("expiration",e.target.value)} /></div>
+            </div>
+          )}
+          {activeTab==="customFields" && (
+            <div className="form-grid">
+              <div className="form-group"><label>APC Case #</label><input value={form.apcCaseNum} onChange={e=>set("apcCaseNum",e.target.value)} /></div>
+              <div className="form-group"><label>Service Call #</label><input value={form.serviceCallNum} onChange={e=>set("serviceCallNum",e.target.value)} /></div>
+              <div className="form-group"><label>Maintenance #</label><input value={form.maintenanceNum} onChange={e=>set("maintenanceNum",e.target.value)} /></div>
+              <div className="form-group"><label>Customer PO#</label><input value={form.customerPO} onChange={e=>set("customerPO",e.target.value)} /></div>
+              <div className="form-group"><label>APC Sales Order#</label><input value={form.apcSalesOrder} onChange={e=>set("apcSalesOrder",e.target.value)} /></div>
+              <div className="form-group"><label>Location</label><input value={form.contractLocation} onChange={e=>set("contractLocation",e.target.value)} /></div>
+            </div>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" disabled={saving} onClick={async()=>{setSaving(true);await onSave(form);setSaving(false);}}>{saving?"Saving...":"Save"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
