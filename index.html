@@ -179,12 +179,19 @@ const toCamel = obj => {
   const r = {};
   for (const k in obj) { r[m[k]||k] = obj[k]; }
   // Safely parse any jsonb fields that may come back as strings
-  const jsonFields = ["phoneNumbers","customFields"];
-  for (const f of jsonFields) {
+  const arrayJsonFields = ["phoneNumbers"];
+  const objectJsonFields = ["customFields"];
+  for (const f of arrayJsonFields) {
     if (typeof r[f] === "string") {
       try { r[f] = JSON.parse(r[f]); } catch(e) { r[f] = []; }
     }
     if (!Array.isArray(r[f])) r[f] = [];
+  }
+  for (const f of objectJsonFields) {
+    if (typeof r[f] === "string") {
+      try { r[f] = JSON.parse(r[f]); } catch(e) { r[f] = {}; }
+    }
+    if (!r[f] || Array.isArray(r[f])) r[f] = {};
   }
   return r;
 };
@@ -361,7 +368,7 @@ function App() {
     const tableMap = { jobs:"jobs", tasks:"tasks", equipment:"equipment", serviceContracts:"service_contracts" };
     // Build clean payload with only valid DB fields per table
     const fieldMap = {
-      jobs: ["date","location","summary","team","status"],
+      jobs: ["date","location","summary","team","status","custom_fields"],
       tasks: ["date","summary","notes","status","substatus"],
       equipment: ["item","location","status","substatus","notes","qty","warranty","manufacturer","model_number","serial_number","part_number","installed","removed","sub_item_of"],
       serviceContracts: ["summary","status","substatus","start_date","expiration","apc_case_num","service_call_num","maintenance_num","customer_po","apc_sales_order","contract_location","custom_fields"]
@@ -841,13 +848,21 @@ function generateDates(startDate, frequency, occurrences) {
 
 function NewJobModal({ client, record, onClose, onSave }) {
   const [saving, setSaving] = useState(false);
+  const cf0 = (record&&record.customFields)||{};
   const [form, setForm] = useState(record||{date:"",location:"Primary",summary:"",team:"",status:"Active Job"});
+  const [customFields, setCustomFields] = useState({apcCaseNum:cf0.apcCaseNum||"",serviceCallNum:cf0.serviceCallNum||"",maintenanceNum:cf0.maintenanceNum||"",customerPO:cf0.customerPO||"",apcSalesOrder:cf0.apcSalesOrder||""});
+  const [activeTab, setActiveTab] = useState("details");
   const [recur, setRecur] = useState(false);
   const [frequency, setFrequency] = useState("Monthly");
   const [occurrences, setOccurrences] = useState(2);
   const set=(k,v)=>setForm(p=>({...p,[k]:v}));
+  const setCF=(k,v)=>setCustomFields(p=>({...p,[k]:v}));
   React.useEffect(() => {
-    if (record) setForm({...record});
+    if (record) {
+      setForm({...record});
+      const cf=(record.customFields)||{};
+      setCustomFields({apcCaseNum:cf.apcCaseNum||"",serviceCallNum:cf.serviceCallNum||"",maintenanceNum:cf.maintenanceNum||"",customerPO:cf.customerPO||"",apcSalesOrder:cf.apcSalesOrder||""});
+    }
   }, [record?.id]);
 
   const previewDates = recur && form.date ? generateDates(form.date, frequency, occurrences) : [];
@@ -856,44 +871,61 @@ function NewJobModal({ client, record, onClose, onSave }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e=>e.stopPropagation()}>
         <div className="modal-header"><h3>{record?"Edit Job":"New Job"} &mdash; {client.name}</h3><button className="modal-close" onClick={onClose}>&#215;</button></div>
+        <div className="client-tabs" style={{borderRadius:0}}>
+          <div className={`client-tab ${activeTab==="details"?"active":""}`} onClick={()=>setActiveTab("details")}>Job Details</div>
+          <div className={`client-tab ${activeTab==="customFields"?"active":""}`} onClick={()=>setActiveTab("customFields")}>Custom Fields</div>
+        </div>
         <div className="modal-body">
-          <div className="form-grid">
-            <div className="form-group"><label>Date</label><input type="date" value={form.date} onChange={e=>set("date",e.target.value)} /></div>
-            <div className="form-group"><label>Location</label><input value={form.location} onChange={e=>set("location",e.target.value)} /></div>
-            <div className="form-group full-width"><label>Summary</label><input value={form.summary} onChange={e=>set("summary",e.target.value)} /></div>
-            <div className="form-group"><label>Team</label>
-              <select value={form.team} onChange={e=>set("team",e.target.value)}>
-                <option value="">— Select —</option><option>A/C Maintenance</option><option>A/C Repairs</option><option>APC Certified</option><option>Electrician</option><option>Fire Suppression</option><option>Generator Technician</option><option>Room Cleaning</option><option>StruxureWare Technician</option><option>Thermoscans</option><option>UPS Technician</option>
-              </select>
-            </div>
-            <div className="form-group"><label>Status</label><select value={form.status} onChange={e=>set("status",e.target.value)}><option>Active Job</option><option>Completed Job</option><option>Cancelled</option></select></div>
-          </div>
-          {!record && (
-            <div style={{marginTop:16,borderTop:"1px solid #eee",paddingTop:16}}>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-                <input type="checkbox" id="recurJob" checked={recur} onChange={e=>setRecur(e.target.checked)} />
-                <label htmlFor="recurJob" style={{fontSize:13,fontWeight:600,color:"#1c2b3a",cursor:"pointer",textTransform:"uppercase",letterSpacing:"0.3px"}}>Create Recurring Jobs</label>
+          {activeTab==="details" && (
+            <>
+              <div className="form-grid">
+                <div className="form-group"><label>Date</label><input type="date" value={form.date} onChange={e=>set("date",e.target.value)} /></div>
+                <div className="form-group"><label>Location</label><input value={form.location} onChange={e=>set("location",e.target.value)} /></div>
+                <div className="form-group full-width"><label>Summary</label><input value={form.summary} onChange={e=>set("summary",e.target.value)} /></div>
+                <div className="form-group"><label>Team</label>
+                  <select value={form.team} onChange={e=>set("team",e.target.value)}>
+                    <option value="">— Select —</option><option>A/C Maintenance</option><option>A/C Repairs</option><option>APC Certified</option><option>Electrician</option><option>Fire Suppression</option><option>Generator Technician</option><option>Room Cleaning</option><option>StruxureWare Technician</option><option>Thermoscans</option><option>UPS Technician</option>
+                  </select>
+                </div>
+                <div className="form-group"><label>Status</label><select value={form.status} onChange={e=>set("status",e.target.value)}><option>Active Job</option><option>Completed Job</option><option>Cancelled</option></select></div>
               </div>
-              {recur && (
-                <div className="form-grid" style={{background:"#f9f7f4",padding:12,borderRadius:6}}>
-                  <div className="form-group"><label>Frequency</label>
-                    <select value={frequency} onChange={e=>setFrequency(e.target.value)}>
-                      <option>Monthly</option><option>Semi-Annually</option><option>Annually</option>
-                    </select>
+              {!record && (
+                <div style={{marginTop:16,borderTop:"1px solid #eee",paddingTop:16}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                    <input type="checkbox" id="recurJob" checked={recur} onChange={e=>setRecur(e.target.checked)} />
+                    <label htmlFor="recurJob" style={{fontSize:13,fontWeight:600,color:"#1c2b3a",cursor:"pointer",textTransform:"uppercase",letterSpacing:"0.3px"}}>Create Recurring Jobs</label>
                   </div>
-                  <div className="form-group"><label>Number of Occurrences</label>
-                    <input type="number" min="2" max="20" value={occurrences} onChange={e=>setOccurrences(parseInt(e.target.value)||2)} />
-                  </div>
-                  {previewDates.length > 0 && (
-                    <div className="form-group full-width">
-                      <label>Jobs will be created on these dates</label>
-                      <div style={{background:"#fff",border:"1px solid #ddd",borderRadius:5,padding:"8px 10px",fontSize:12,color:"#555"}}>
-                        {previewDates.map((d,i) => <span key={i} style={{display:"inline-block",background:"#e8f4e8",borderRadius:4,padding:"2px 8px",margin:"2px",color:"#155724"}}>{d}</span>)}
+                  {recur && (
+                    <div className="form-grid" style={{background:"#f9f7f4",padding:12,borderRadius:6}}>
+                      <div className="form-group"><label>Frequency</label>
+                        <select value={frequency} onChange={e=>setFrequency(e.target.value)}>
+                          <option>Monthly</option><option>Semi-Annually</option><option>Annually</option>
+                        </select>
                       </div>
+                      <div className="form-group"><label>Number of Occurrences</label>
+                        <input type="number" min="2" max="20" value={occurrences} onChange={e=>setOccurrences(parseInt(e.target.value)||2)} />
+                      </div>
+                      {previewDates.length > 0 && (
+                        <div className="form-group full-width">
+                          <label>Jobs will be created on these dates</label>
+                          <div style={{background:"#fff",border:"1px solid #ddd",borderRadius:5,padding:"8px 10px",fontSize:12,color:"#555"}}>
+                            {previewDates.map((d,i) => <span key={i} style={{display:"inline-block",background:"#e8f4e8",borderRadius:4,padding:"2px 8px",margin:"2px",color:"#155724"}}>{d}</span>)}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               )}
+            </>
+          )}
+          {activeTab==="customFields" && (
+            <div className="form-grid">
+              <div className="form-group full-width"><label>APC Case #</label><input value={customFields.apcCaseNum} onChange={e=>setCF("apcCaseNum",e.target.value)} placeholder="Enter APC Case number" /></div>
+              <div className="form-group full-width"><label>Service Call #</label><input value={customFields.serviceCallNum} onChange={e=>setCF("serviceCallNum",e.target.value)} placeholder="Enter Service Call number" /></div>
+              <div className="form-group full-width"><label>Maintenance #</label><input value={customFields.maintenanceNum} onChange={e=>setCF("maintenanceNum",e.target.value)} placeholder="Enter Maintenance number" /></div>
+              <div className="form-group full-width"><label>Customer PO#</label><input value={customFields.customerPO} onChange={e=>setCF("customerPO",e.target.value)} placeholder="Enter Customer PO number" /></div>
+              <div className="form-group full-width"><label>APC Sales Order#</label><input value={customFields.apcSalesOrder} onChange={e=>setCF("apcSalesOrder",e.target.value)} placeholder="Enter APC Sales Order number" /></div>
             </div>
           )}
         </div>
@@ -902,11 +934,12 @@ function NewJobModal({ client, record, onClose, onSave }) {
           <button className="btn btn-primary" disabled={saving} onClick={async()=>{
             setSaving(true);
             try {
+              const saveData = {...form, customFields};
               if (recur && !record && form.date) {
                 const dates = generateDates(form.date, frequency, occurrences);
-                for (const d of dates) { await onSave({...form, date: d}); }
+                for (const d of dates) { await onSave({...saveData, date: d}); }
               } else {
-                await onSave(form);
+                await onSave(saveData);
               }
             } catch(e) { alert("Error: " + e.message); }
             setSaving(false);
