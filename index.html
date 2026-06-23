@@ -422,11 +422,14 @@ function App() {
               <span className="nav-icon">{item.icon}</span><span>{item.label}</span>
             </div>
           ))}
+          <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",margin:"8px 0"}}></div>
+          <div className="nav-item" onClick={()=>setCurrentUser(null)} style={{color:"rgba(255,255,255,0.5)"}}>
+            <span className="nav-icon">🚪</span><span>Sign Out</span>
+          </div>
         </nav>
         <div className="sidebar-user">
           <strong>{currentUser.name}</strong>
           <span className="realtime-dot" title="Live sync active"></span>
-          <button className="logout-btn" onClick={()=>setCurrentUser(null)}>Sign Out</button>
         </div>
       </div>
 
