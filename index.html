@@ -732,6 +732,7 @@ function ServiceContractsTab({ client, onDelete, setModal }) {
 function ReportsPage({ clients, sb, toCamel }) {
   const [days, setDays] = useState(90);
   const [allContracts, setAllContracts] = useState([]);
+  const [allTasks, setAllTasks] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
   const [editingContract, setEditingContract] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
@@ -743,16 +744,24 @@ function ReportsPage({ clients, sb, toCamel }) {
     return m;
   }, [clients]);
 
-  const loadContracts = useCallback(async () => {
-    setLoadingData(true);
-    try {
-      const scRows = await sb.get("service_contracts", "order=expiration.asc");
-      setAllContracts((scRows||[]).map(toCamel));
-    } catch(e) { console.error(e); }
-    setLoadingData(false);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoadingData(true);
+      try {
+        const [scRows, taskRows] = await Promise.all([
+          sb.get("service_contracts", "order=expiration.asc"),
+          sb.get("tasks", "status=eq.Active Task&order=date.asc"),
+        ]);
+        if (cancelled) return;
+        setAllContracts((scRows||[]).map(toCamel));
+        setAllTasks((taskRows||[]).map(toCamel));
+      } catch(e) { console.error(e); }
+      if (!cancelled) setLoadingData(false);
+    };
+    load();
+    return () => { cancelled = true; };
   }, []);
-
-  useEffect(() => { loadContracts(); }, []);
 
   const today = new Date(); today.setHours(0,0,0,0);
   const cutoff = new Date(today); cutoff.setDate(today.getDate() + days);
@@ -763,11 +772,11 @@ function ReportsPage({ clients, sb, toCamel }) {
     .sort((a,b) => a.expiration.localeCompare(b.expiration)),
   [allContracts, days, clientNameMap]);
 
-  const tasksDue = useMemo(() => clients.flatMap(c=>(c.tasks||[])
-    .filter(t=>t.date&&new Date(t.date)>=today&&new Date(t.date)<=cutoff&&t.status==="Active Task")
-    .map(t=>({...t,clientName:c.name})))
-    .sort((a,b)=>a.date.localeCompare(b.date)),
-  [clients, days]);
+  const tasksDue = useMemo(() => allTasks
+    .filter(t => t.date && new Date(t.date) >= today && new Date(t.date) <= cutoff)
+    .map(t => ({ ...t, clientName: clientNameMap[t.clientId] || "Unknown" }))
+    .sort((a,b) => a.date.localeCompare(b.date)),
+  [allTasks, days, clientNameMap]);
 
   const urgencyColor = (dateStr) => {
     const diff = (new Date(dateStr) - today) / (1000*60*60*24);
@@ -780,9 +789,21 @@ function ReportsPage({ clients, sb, toCamel }) {
     if (!editingContract) return;
     setSaving(true);
     try {
-      const fields = { summary:editingContract.summary, status:editingContract.status, substatus:editingContract.substatus, start_date:editingContract.startDate, expiration:editingContract.expiration, apc_case_num:editingContract.apcCaseNum, service_call_num:editingContract.serviceCallNum, maintenance_num:editingContract.maintenanceNum, customer_po:editingContract.customerPO, apc_sales_order:editingContract.apcSalesOrder, contract_location:editingContract.contractLocation };
+      const fields = {
+        summary: editingContract.summary,
+        status: editingContract.status,
+        substatus: editingContract.substatus,
+        start_date: editingContract.startDate,
+        expiration: editingContract.expiration,
+        apc_case_num: editingContract.apcCaseNum,
+        service_call_num: editingContract.serviceCallNum,
+        maintenance_num: editingContract.maintenanceNum,
+        customer_po: editingContract.customerPO,
+        apc_sales_order: editingContract.apcSalesOrder,
+        contract_location: editingContract.contractLocation,
+      };
       await sb.patch("service_contracts", editingContract.id, fields);
-      setAllContracts(prev => prev.map(c => c.id === editingContract.id ? {...c, ...editingContract} : c));
+      setAllContracts(prev => prev.map(c => c.id === editingContract.id ? { ...c, ...editingContract } : c));
       setEditingContract(null);
     } catch(e) { console.error(e); alert("Save failed. Please try again."); }
     setSaving(false);
@@ -792,25 +813,24 @@ function ReportsPage({ clients, sb, toCamel }) {
     if (!editingTask) return;
     setSaving(true);
     try {
-      const fields = { date:editingTask.date, summary:editingTask.summary, notes:editingTask.notes, status:editingTask.status, substatus:editingTask.substatus };
+      const fields = {
+        date: editingTask.date,
+        summary: editingTask.summary,
+        notes: editingTask.notes,
+        status: editingTask.status,
+        substatus: editingTask.substatus,
+      };
       await sb.patch("tasks", editingTask.id, fields);
+      setAllTasks(prev => prev.map(t => t.id === editingTask.id ? { ...t, ...editingTask } : t));
       setEditingTask(null);
     } catch(e) { console.error(e); alert("Save failed. Please try again."); }
     setSaving(false);
   };
 
-  const th={textAlign:"left",padding:"6px 8px",color:"#fff",fontSize:"11px",fontWeight:600,background:"#1c2b3a",whiteSpace:"nowrap"};
-  const tdBase={padding:"8px 10px",fontSize:"13px",verticalAlign:"middle"};
-  const rowHover={cursor:"pointer"};
-
-  const dropdownStyle = {
-    padding:"6px 10px", borderRadius:"5px", border:"1px solid #ddd",
-    background:"#fff", fontSize:"13px", color:"#1c2b3a", cursor:"pointer",
-    fontFamily:"Georgia, serif", fontWeight:600
-  };
-
-  const inputStyle = {padding:"6px 8px",border:"1px solid #ccc",borderRadius:4,fontSize:"12px",fontFamily:"Georgia,serif",width:"100%"};
-  const labelStyle = {fontSize:"11px",fontWeight:600,color:"#666",textTransform:"uppercase",letterSpacing:"0.3px",display:"block",marginBottom:3};
+  const th = { textAlign:"left", padding:"7px 10px", color:"#fff", fontSize:"11px", fontWeight:600, background:"#1c2b3a", whiteSpace:"nowrap" };
+  const tdBase = { padding:"8px 10px", fontSize:"13px", verticalAlign:"middle" };
+  const inp = { padding:"8px 10px", border:"1px solid #ddd", borderRadius:5, fontSize:13, fontFamily:"Georgia,serif", width:"100%" };
+  const dropdownStyle = { padding:"6px 10px", borderRadius:"5px", border:"1px solid #ddd", background:"#fff", fontSize:"13px", color:"#1c2b3a", cursor:"pointer", fontFamily:"Georgia, serif", fontWeight:600 };
 
   return (
     <>
@@ -826,16 +846,18 @@ function ReportsPage({ clients, sb, toCamel }) {
           </select>
         </div>
       </div>
+
       <div className="content">
         {loadingData && <p style={{color:"#999",fontSize:"13px",marginBottom:12}}>Loading report data...</p>}
 
-        {/* Contracts Expiring — full width */}
+        {/* Contracts Expiring */}
         <div className="report-card" style={{marginBottom:16}}>
-          <h3 style={{marginBottom:12}}>Contracts Expiring — Next {days} Days
+          <h3 style={{marginBottom:12}}>
+            Contracts Expiring — Next {days} Days
             <span style={{marginLeft:8,background:"#1c2b3a",color:"#e8d5a3",borderRadius:10,padding:"2px 10px",fontSize:12,fontWeight:700}}>{expiringContracts.length}</span>
-            <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"#999"}}>Click a row to edit</span>
+            <span style={{marginLeft:10,fontSize:11,fontWeight:400,color:"#aaa"}}>Click a row to edit</span>
           </h3>
-          {expiringContracts.length===0
+          {expiringContracts.length === 0
             ? <p style={{color:"#999",fontSize:"13px"}}>No contracts expiring in the next {days} days.</p>
             : (
               <div style={{overflowX:"auto"}}>
@@ -848,16 +870,16 @@ function ReportsPage({ clients, sb, toCamel }) {
                     <th style={th}>Expiration</th>
                   </tr></thead>
                   <tbody>
-                    {expiringContracts.map((c,i)=>(
+                    {expiringContracts.map((c,i) => (
                       <tr key={c.id||i}
-                        style={{borderBottom:"1px solid #f0ede8",background:i%2===0?"#fff":"#faf8f5",...rowHover}}
                         onClick={()=>setEditingContract({...c})}
-                        onMouseEnter={e=>e.currentTarget.style.background="#eef4ff"}
+                        style={{borderBottom:"1px solid #f0ede8",background:i%2===0?"#fff":"#faf8f5",cursor:"pointer"}}
+                        onMouseEnter={e=>e.currentTarget.style.background="#e8f0ff"}
                         onMouseLeave={e=>e.currentTarget.style.background=i%2===0?"#fff":"#faf8f5"}
                       >
                         <td style={{...tdBase,fontWeight:600,color:"#1c2b3a",whiteSpace:"nowrap"}}>{c.clientName}</td>
                         <td style={{...tdBase,color:"#333",maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.summary||"—"}</td>
-                        <td style={{...tdBase}}>{c.status ? <span className={"badge "+(c.status==="Active"?"badge-active":c.status==="Completed"?"badge-completed":"badge-task")}>{c.status}</span> : "—"}</td>
+                        <td style={tdBase}>{c.status ? <span className={"badge "+(c.status==="Active"?"badge-active":c.status==="Completed"?"badge-completed":"badge-task")}>{c.status}</span> : "—"}</td>
                         <td style={{...tdBase,color:"#555",whiteSpace:"nowrap"}}>{c.contractLocation||"—"}</td>
                         <td style={{...tdBase,fontWeight:700,color:urgencyColor(c.expiration),whiteSpace:"nowrap"}}>{c.expiration}</td>
                       </tr>
@@ -869,26 +891,31 @@ function ReportsPage({ clients, sb, toCamel }) {
           }
         </div>
 
-        {/* Tasks Due — full width */}
+        {/* Active Tasks Due */}
         <div className="report-card">
-          <h3 style={{marginBottom:12}}>Active Tasks Due — Next {days} Days
+          <h3 style={{marginBottom:12}}>
+            Active Tasks Due — Next {days} Days
             <span style={{marginLeft:8,background:"#1c2b3a",color:"#e8d5a3",borderRadius:10,padding:"2px 10px",fontSize:12,fontWeight:700}}>{tasksDue.length}</span>
-            <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"#999"}}>Click a row to edit</span>
+            <span style={{marginLeft:10,fontSize:11,fontWeight:400,color:"#aaa"}}>Click a row to edit</span>
           </h3>
-          {tasksDue.length===0
-            ? <p style={{color:"#999",fontSize:"13px"}}>No tasks due in the next {days} days.</p>
+          {tasksDue.length === 0
+            ? <p style={{color:"#999",fontSize:"13px"}}>No active tasks due in the next {days} days.</p>
             : (
               <div style={{overflowX:"auto"}}>
                 <table style={{width:"100%",borderCollapse:"collapse"}}>
                   <thead><tr>
-                    <th style={th}>Date</th><th style={th}>Client</th><th style={th}>Summary</th><th style={th}>Substatus</th><th style={th}>Notes</th>
+                    <th style={th}>Date</th>
+                    <th style={th}>Client</th>
+                    <th style={th}>Summary</th>
+                    <th style={th}>Substatus</th>
+                    <th style={th}>Notes</th>
                   </tr></thead>
                   <tbody>
-                    {tasksDue.map((t,i)=>(
+                    {tasksDue.map((t,i) => (
                       <tr key={t.id||i}
-                        style={{borderBottom:"1px solid #f0ede8",background:i%2===0?"#fff":"#faf8f5",...rowHover}}
                         onClick={()=>setEditingTask({...t})}
-                        onMouseEnter={e=>e.currentTarget.style.background="#eef4ff"}
+                        style={{borderBottom:"1px solid #f0ede8",background:i%2===0?"#fff":"#faf8f5",cursor:"pointer"}}
+                        onMouseEnter={e=>e.currentTarget.style.background="#e8f0ff"}
                         onMouseLeave={e=>e.currentTarget.style.background=i%2===0?"#fff":"#faf8f5"}
                       >
                         <td style={{...tdBase,fontWeight:700,color:urgencyColor(t.date),whiteSpace:"nowrap"}}>{t.date}</td>
@@ -904,7 +931,6 @@ function ReportsPage({ clients, sb, toCamel }) {
             )
           }
         </div>
-
       </div>
 
       {/* Edit Contract Modal */}
@@ -917,52 +943,21 @@ function ReportsPage({ clients, sb, toCamel }) {
             </div>
             <div className="modal-body">
               <div className="form-grid">
-                <div className="form-group full-width">
-                  <label>Summary</label>
-                  <input style={{padding:"8px 10px",border:"1px solid #ddd",borderRadius:5,fontSize:13,fontFamily:"Georgia,serif"}} value={editingContract.summary||""} onChange={e=>setEditingContract(p=>({...p,summary:e.target.value}))} />
-                </div>
-                <div className="form-group">
-                  <label>Status</label>
-                  <select style={{padding:"8px 10px",border:"1px solid #ddd",borderRadius:5,fontSize:13,fontFamily:"Georgia,serif"}} value={editingContract.status||"Active"} onChange={e=>setEditingContract(p=>({...p,status:e.target.value}))}>
+                <div className="form-group full-width"><label>Summary</label><input style={inp} value={editingContract.summary||""} onChange={e=>setEditingContract(p=>({...p,summary:e.target.value}))} /></div>
+                <div className="form-group"><label>Status</label>
+                  <select style={inp} value={editingContract.status||"Active"} onChange={e=>setEditingContract(p=>({...p,status:e.target.value}))}>
                     <option>Active</option><option>Completed</option><option>Cancelled</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Substatus</label>
-                  <input style={{padding:"8px 10px",border:"1px solid #ddd",borderRadius:5,fontSize:13,fontFamily:"Georgia,serif"}} value={editingContract.substatus||""} onChange={e=>setEditingContract(p=>({...p,substatus:e.target.value}))} placeholder="e.g. Fulfilled" />
-                </div>
-                <div className="form-group">
-                  <label>Start Date</label>
-                  <input type="date" style={{padding:"8px 10px",border:"1px solid #ddd",borderRadius:5,fontSize:13,fontFamily:"Georgia,serif"}} value={editingContract.startDate||""} onChange={e=>setEditingContract(p=>({...p,startDate:e.target.value}))} />
-                </div>
-                <div className="form-group">
-                  <label>Expiration Date</label>
-                  <input type="date" style={{padding:"8px 10px",border:"1px solid #ddd",borderRadius:5,fontSize:13,fontFamily:"Georgia,serif"}} value={editingContract.expiration||""} onChange={e=>setEditingContract(p=>({...p,expiration:e.target.value}))} />
-                </div>
-                <div className="form-group">
-                  <label>Location</label>
-                  <input style={{padding:"8px 10px",border:"1px solid #ddd",borderRadius:5,fontSize:13,fontFamily:"Georgia,serif"}} value={editingContract.contractLocation||""} onChange={e=>setEditingContract(p=>({...p,contractLocation:e.target.value}))} />
-                </div>
-                <div className="form-group">
-                  <label>APC Case #</label>
-                  <input style={{padding:"8px 10px",border:"1px solid #ddd",borderRadius:5,fontSize:13,fontFamily:"Georgia,serif"}} value={editingContract.apcCaseNum||""} onChange={e=>setEditingContract(p=>({...p,apcCaseNum:e.target.value}))} />
-                </div>
-                <div className="form-group">
-                  <label>Service Call #</label>
-                  <input style={{padding:"8px 10px",border:"1px solid #ddd",borderRadius:5,fontSize:13,fontFamily:"Georgia,serif"}} value={editingContract.serviceCallNum||""} onChange={e=>setEditingContract(p=>({...p,serviceCallNum:e.target.value}))} />
-                </div>
-                <div className="form-group">
-                  <label>Maintenance #</label>
-                  <input style={{padding:"8px 10px",border:"1px solid #ddd",borderRadius:5,fontSize:13,fontFamily:"Georgia,serif"}} value={editingContract.maintenanceNum||""} onChange={e=>setEditingContract(p=>({...p,maintenanceNum:e.target.value}))} />
-                </div>
-                <div className="form-group">
-                  <label>Customer PO#</label>
-                  <input style={{padding:"8px 10px",border:"1px solid #ddd",borderRadius:5,fontSize:13,fontFamily:"Georgia,serif"}} value={editingContract.customerPO||""} onChange={e=>setEditingContract(p=>({...p,customerPO:e.target.value}))} />
-                </div>
-                <div className="form-group">
-                  <label>APC Sales Order#</label>
-                  <input style={{padding:"8px 10px",border:"1px solid #ddd",borderRadius:5,fontSize:13,fontFamily:"Georgia,serif"}} value={editingContract.apcSalesOrder||""} onChange={e=>setEditingContract(p=>({...p,apcSalesOrder:e.target.value}))} />
-                </div>
+                <div className="form-group"><label>Substatus</label><input style={inp} value={editingContract.substatus||""} onChange={e=>setEditingContract(p=>({...p,substatus:e.target.value}))} placeholder="e.g. Fulfilled" /></div>
+                <div className="form-group"><label>Start Date</label><input type="date" style={inp} value={editingContract.startDate||""} onChange={e=>setEditingContract(p=>({...p,startDate:e.target.value}))} /></div>
+                <div className="form-group"><label>Expiration Date</label><input type="date" style={inp} value={editingContract.expiration||""} onChange={e=>setEditingContract(p=>({...p,expiration:e.target.value}))} /></div>
+                <div className="form-group"><label>Location</label><input style={inp} value={editingContract.contractLocation||""} onChange={e=>setEditingContract(p=>({...p,contractLocation:e.target.value}))} /></div>
+                <div className="form-group"><label>APC Case #</label><input style={inp} value={editingContract.apcCaseNum||""} onChange={e=>setEditingContract(p=>({...p,apcCaseNum:e.target.value}))} /></div>
+                <div className="form-group"><label>Service Call #</label><input style={inp} value={editingContract.serviceCallNum||""} onChange={e=>setEditingContract(p=>({...p,serviceCallNum:e.target.value}))} /></div>
+                <div className="form-group"><label>Maintenance #</label><input style={inp} value={editingContract.maintenanceNum||""} onChange={e=>setEditingContract(p=>({...p,maintenanceNum:e.target.value}))} /></div>
+                <div className="form-group"><label>Customer PO#</label><input style={inp} value={editingContract.customerPO||""} onChange={e=>setEditingContract(p=>({...p,customerPO:e.target.value}))} /></div>
+                <div className="form-group"><label>APC Sales Order#</label><input style={inp} value={editingContract.apcSalesOrder||""} onChange={e=>setEditingContract(p=>({...p,apcSalesOrder:e.target.value}))} /></div>
               </div>
             </div>
             <div className="modal-footer">
@@ -983,29 +978,20 @@ function ReportsPage({ clients, sb, toCamel }) {
             </div>
             <div className="modal-body">
               <div className="form-grid">
-                <div className="form-group">
-                  <label>Date</label>
-                  <input type="date" style={{padding:"8px 10px",border:"1px solid #ddd",borderRadius:5,fontSize:13,fontFamily:"Georgia,serif"}} value={editingTask.date||""} onChange={e=>setEditingTask(p=>({...p,date:e.target.value}))} />
-                </div>
-                <div className="form-group">
-                  <label>Status</label>
-                  <select style={{padding:"8px 10px",border:"1px solid #ddd",borderRadius:5,fontSize:13,fontFamily:"Georgia,serif"}} value={editingTask.status||"Active Task"} onChange={e=>setEditingTask(p=>({...p,status:e.target.value}))}>
+                <div className="form-group"><label>Date</label><input type="date" style={inp} value={editingTask.date||""} onChange={e=>setEditingTask(p=>({...p,date:e.target.value}))} /></div>
+                <div className="form-group"><label>Status</label>
+                  <select style={inp} value={editingTask.status||"Active Task"} onChange={e=>setEditingTask(p=>({...p,status:e.target.value}))}>
                     <option>Active Task</option><option>Completed Task</option><option>Cancelled</option>
                   </select>
                 </div>
-                <div className="form-group full-width">
-                  <label>Summary</label>
-                  <input style={{padding:"8px 10px",border:"1px solid #ddd",borderRadius:5,fontSize:13,fontFamily:"Georgia,serif"}} value={editingTask.summary||""} onChange={e=>setEditingTask(p=>({...p,summary:e.target.value}))} />
-                </div>
-                <div className="form-group">
-                  <label>Substatus</label>
-                  <select style={{padding:"8px 10px",border:"1px solid #ddd",borderRadius:5,fontSize:13,fontFamily:"Georgia,serif"}} value={editingTask.substatus||""} onChange={e=>setEditingTask(p=>({...p,substatus:e.target.value}))}>
+                <div className="form-group full-width"><label>Summary</label><input style={inp} value={editingTask.summary||""} onChange={e=>setEditingTask(p=>({...p,summary:e.target.value}))} /></div>
+                <div className="form-group"><label>Substatus</label>
+                  <select style={inp} value={editingTask.substatus||""} onChange={e=>setEditingTask(p=>({...p,substatus:e.target.value}))}>
                     <option value="">— Select —</option><option>In Progress</option><option>Booked/Scheduled</option><option>SVA Required</option><option>Paperwork Required</option><option>Paperwork Received</option><option>Re-Book</option><option>Cancelled/Missed</option><option>HOLD DO NOT BOOK</option>
                   </select>
                 </div>
-                <div className="form-group full-width">
-                  <label>Notes</label>
-                  <textarea rows={3} style={{padding:"8px 10px",border:"1px solid #ddd",borderRadius:5,fontSize:13,fontFamily:"Georgia,serif",resize:"vertical",width:"100%"}} value={editingTask.notes||""} onChange={e=>setEditingTask(p=>({...p,notes:e.target.value}))} />
+                <div className="form-group full-width"><label>Notes</label>
+                  <textarea rows={3} style={{...inp,resize:"vertical"}} value={editingTask.notes||""} onChange={e=>setEditingTask(p=>({...p,notes:e.target.value}))} />
                 </div>
               </div>
             </div>
