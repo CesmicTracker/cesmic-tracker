@@ -936,11 +936,11 @@ function ReportsPage({ clients, sb, toCamel }) {
               <div style={{overflowX:"auto"}}>
                 <table style={{width:"100%",borderCollapse:"collapse"}}>
                   <thead><tr>
-                    <th style={{...th,cursor:"pointer"}} onClick={()=>setTaskSort("date")}>Date {taskSort==="date"?"▲":""}</th>
                     <th style={th}>Client</th>
                     <th style={th}>Summary</th>
-                    <th style={{...th,cursor:"pointer"}} onClick={()=>setTaskSort("substatus")}>Substatus {taskSort==="substatus"?"▲":""}</th>
+                    <th style={{...th,cursor:"pointer",userSelect:"none"}} onClick={()=>setTaskSort(s=>s==="substatus"?"date":"substatus")}>Substatus {taskSort==="substatus"?"▲":"↕"}</th>
                     <th style={th}>Notes</th>
+                    <th style={{...th,cursor:"pointer",userSelect:"none"}} onClick={()=>setTaskSort(s=>s==="date"?"substatus":"date")}>Date {taskSort==="date"?"▲":"↕"}</th>
                   </tr></thead>
                   <tbody>
                     {tasksToShow.map((t,i) => {
@@ -952,11 +952,11 @@ function ReportsPage({ clients, sb, toCamel }) {
                           onMouseEnter={e=>e.currentTarget.style.background="#e8f0ff"}
                           onMouseLeave={e=>e.currentTarget.style.background=i%2===0?"#fff":"#faf8f5"}
                         >
-                          <td style={{...tdBase,fontWeight:700,color:dl.color,whiteSpace:"nowrap"}}>{dl.text}</td>
                           <td style={{...tdBase,fontWeight:600,color:"#1c2b3a",whiteSpace:"nowrap"}}>{t.clientName}</td>
                           <td style={{...tdBase,color:"#333",maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.summary||"—"}</td>
                           <td style={{...tdBase,color:"#555",whiteSpace:"nowrap"}}>{t.substatus||"—"}</td>
                           <td style={{...tdBase,color:"#777",maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.notes||"—"}</td>
+                          <td style={{...tdBase,fontWeight:700,color:dl.color,whiteSpace:"nowrap"}}>{dl.text}</td>
                         </tr>
                       );
                     })}
