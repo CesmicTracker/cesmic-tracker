@@ -737,6 +737,7 @@ function ReportsPage({ clients, sb, toCamel }) {
   const [editingContract, setEditingContract] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [taskSort, setTaskSort] = useState("date");
 
   const clientNameMap = useMemo(() => {
     const m = {};
@@ -781,8 +782,11 @@ function ReportsPage({ clients, sb, toCamel }) {
   // All active tasks — all of them, no date filter
   const tasksToShow = useMemo(() => allTasks
     .map(t => ({ ...t, clientName: clientNameMap[t.clientId] || "Unknown" }))
-    .sort((a,b) => (a.date||"9999").localeCompare(b.date||"9999")),
-  [allTasks, clientNameMap]);
+    .sort((a,b) => {
+      if (taskSort === "substatus") return (a.substatus||"").localeCompare(b.substatus||"");
+      return (a.date||"9999").localeCompare(b.date||"9999");
+    }),
+  [allTasks, clientNameMap, taskSort]);
 
   const expiryLabel = (dateStr) => {
     if (!dateStr) return { text: "No date", color: "#aaa" };
@@ -932,10 +936,10 @@ function ReportsPage({ clients, sb, toCamel }) {
               <div style={{overflowX:"auto"}}>
                 <table style={{width:"100%",borderCollapse:"collapse"}}>
                   <thead><tr>
-                    <th style={th}>Date</th>
+                    <th style={{...th,cursor:"pointer"}} onClick={()=>setTaskSort("date")}>Date {taskSort==="date"?"▲":""}</th>
                     <th style={th}>Client</th>
                     <th style={th}>Summary</th>
-                    <th style={th}>Substatus</th>
+                    <th style={{...th,cursor:"pointer"}} onClick={()=>setTaskSort("substatus")}>Substatus {taskSort==="substatus"?"▲":""}</th>
                     <th style={th}>Notes</th>
                   </tr></thead>
                   <tbody>
